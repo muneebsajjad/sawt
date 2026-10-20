@@ -9,7 +9,7 @@ description = "Listen to any web page or book, read aloud by a voice model runni
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.15"   # onnxruntime has no wheels outside this range
 dependencies = [
   "kokoro-onnx>=0.4",
   # onnxruntime stopped shipping Intel-Mac wheels after 1.23
