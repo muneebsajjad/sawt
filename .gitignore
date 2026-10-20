@@ -1,0 +1,15 @@
+work/
+out/
+qa/
+books/
+__pycache__/
+.gstack/
+.DS_Store
+*.log
+
+# local notes, not part of the project
+ECOSYSTEM.md
+# dev environment and build output
+.venv/
+dist/
+.pytest_cache/

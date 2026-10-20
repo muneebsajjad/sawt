@@ -1,0 +1,88 @@
+:root {
+  --bg: #faf9f7;
+  --fg: #1f1e1c;
+  --muted: #6b6862;
+  --line: #e2dfd9;
+  --accent: #c2603a;
+  --btn: #efece7;
+  --code: #f1eee9;
+  --ok: #2e7d4f;
+  --warn: #a8641c;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1b19;
+    --fg: #ecebe8;
+    --muted: #9a968f;
+    --line: #34322e;
+    --accent: #d9774f;
+    --btn: #2a2825;
+    --code: #252421;
+    --ok: #7fcf9c;
+    --warn: #e8b06a;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+main { max-width: 640px; margin: 0 auto; padding: 48px 16px 64px; }
+h1 { font-size: 26px; margin: 0 0 8px; }
+h2 { font-size: 16px; margin: 0 0 6px; }
+.lede { color: var(--muted); margin: 0 0 24px; }
+code, kbd, pre { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+p code, kbd { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 28px;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.status[data-state="ok"] { border-color: var(--ok); }
+.status[data-state="ok"] .dot { background: var(--ok); }
+.status[data-state="missing"] .dot { background: var(--warn); }
+
+ol { padding-left: 20px; margin: 0; }
+li { margin-bottom: 26px; }
+li p { margin: 6px 0 0; color: var(--muted); }
+
+pre {
+  position: relative;
+  margin: 8px 0 0;
+  padding: 12px 70px 12px 12px;
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+pre[hidden] { display: none; }
+button {
+  font: 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--fg);
+  background: var(--btn);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.copy { position: absolute; top: 8px; right: 8px; }
+.tabs { display: flex; gap: 6px; margin-top: 10px; }
+.tabs [aria-selected="true"] { border-color: var(--accent); color: var(--accent); }
+
+#done {
+  padding: 16px;
+  border: 1px solid var(--ok);
+  border-radius: 8px;
+}
+#done p { margin: 0; }

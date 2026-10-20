@@ -1,0 +1,47 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set up Sawt</title>
+<link rel="stylesheet" href="welcome.css">
+<body>
+<main>
+  <h1>Set up the voice engine</h1>
+  <p class="lede">Reading happens on your own computer. This extension talks to a small, free voice
+    engine you run locally; nothing you read is sent anywhere.</p>
+
+  <div id="status" class="status" data-state="checking">
+    <span class="dot"></span><span id="status-text">Checking for the engine…</span>
+  </div>
+
+  <ol>
+    <li>
+      <h2>Install uv</h2>
+      <p>The Python installer the engine uses. Skip this if <code>uv --version</code> already works.</p>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-os="unix" aria-selected="true">macOS / Linux</button>
+        <button role="tab" data-os="win" aria-selected="false">Windows</button>
+      </div>
+      <pre data-os="unix"><code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></pre>
+      <pre data-os="win" hidden><code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></pre>
+    </li>
+    <li>
+      <h2>Install the engine</h2>
+      <pre><code id="install-cmd"></code></pre>
+    </li>
+    <li>
+      <h2>Start it</h2>
+      <pre><code>sawt serve</code></pre>
+      <p>The first start downloads the voice model once (about 350MB). Leave the window open
+        while you listen. On macOS, <code>sawt agent install</code> starts it at login
+        instead, so you never think about it again.</p>
+    </li>
+  </ol>
+
+  <section id="done" hidden>
+    <h2>You're set</h2>
+    <p>Open any article and press <kbd>Alt</kbd>+<kbd>R</kbd>, or click the toolbar icon.
+      Right-click selected text to hear just that.</p>
+  </section>
+</main>
+<script src="welcome.js"></script>
+</body>

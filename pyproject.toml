@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sawt"
+dynamic = ["version"]
+description = "Listen to any web page or book, read aloud by a voice model running on your own machine."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = [
+  "kokoro-onnx>=0.4",
+  # onnxruntime stopped shipping Intel-Mac wheels after 1.23
+  "onnxruntime<1.24; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+  "numpy",
+  "soundfile",
+  "num2words",
+  "tqdm",
+  # books only; the read-aloud server does not touch these
+  "ebooklib",
+  "beautifulsoup4",
+  "pypdf",
+  "wordfreq",
+]
+
+[project.scripts]
+sawt = "sawt.cli:main"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.hatch.version]
+path = "src/sawt/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sawt"]

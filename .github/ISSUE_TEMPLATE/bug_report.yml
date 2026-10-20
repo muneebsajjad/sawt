@@ -1,0 +1,32 @@
+name: Bug report
+description: Something reads wrong, sounds wrong, or does not work
+labels: [bug]
+body:
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options: [Browser extension, Engine / sawt serve, Book conversion, Install]
+    validations: {required: true}
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: For a mispronunciation, paste the exact sentence. For a page that reads wrong, the URL.
+    validations: {required: true}
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: input
+    id: version
+    attributes:
+      label: Versions
+      description: "`sawt --version`, the extension version in chrome://extensions, your OS and browser"
+    validations: {required: true}
+  - type: textarea
+    id: log
+    attributes:
+      label: Engine output
+      description: What `sawt serve` printed, if anything
+      render: text

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Run straight from this checkout: ./sawt <command> [args]
+# Uses the project's .venv (create it with `uv sync`); SAWT_PYTHON picks another interpreter.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PY="${SAWT_PYTHON:-$HERE/.venv/bin/python}"
+[ -x "$PY" ] || { echo "no interpreter at $PY - run \`uv sync\` first, or set SAWT_PYTHON" >&2; exit 1; }
+export PYTHONPATH="$HERE/src${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PY" -m sawt "$@"

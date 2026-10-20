@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="popup.css">
+<body>
+  <header>
+    <div id="title">Sawt</div>
+    <div id="status" class="muted">Idle</div>
+  </header>
+
+  <p id="sentence" class="muted"></p>
+  <p id="error" hidden></p>
+
+  <div id="resumed" hidden>
+    <span>Picked up where you left off</span>
+    <button id="restart">Start over</button>
+  </div>
+
+  <div id="setup" hidden>
+    <p>The voice engine isn't running on this computer. It's free and runs locally, so
+      nothing you read leaves your machine.</p>
+    <button id="setup-open" class="primary">Set it up</button>
+  </div>
+
+  <button id="read" class="primary">Read this page</button>
+
+  <div id="controls">
+    <button id="prev" title="Previous sentence">⏮</button>
+    <button id="toggle" title="Pause / resume">⏸</button>
+    <button id="next" title="Next sentence">⏭</button>
+    <button id="stop" title="Stop">⏹</button>
+  </div>
+
+  <div id="settings">
+    <label>Voice <select id="voice"></select></label>
+    <label>Speed
+      <select id="speed">
+        <option value="0.75">0.75×</option>
+        <option value="0.85">0.85×</option>
+        <option value="1">1.0×</option>
+        <option value="1.1">1.1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+      </select>
+    </label>
+  </div>
+
+  <footer class="muted">Alt+R reads or pauses · right-click a selection to read just that</footer>
+  <script src="popup.js"></script>
+</body>
