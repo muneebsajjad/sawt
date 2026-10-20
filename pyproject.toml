@@ -9,6 +9,21 @@ description = "Listen to any web page or book, read aloud by a voice model runni
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
+authors = [{ name = "Muneeb Sajjad" }]
+keywords = ["text-to-speech", "tts", "read-aloud", "audiobook", "kokoro", "offline", "privacy",
+            "accessibility", "epub"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "Natural Language :: English",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Topic :: Multimedia :: Sound/Audio :: Speech",
+  "Topic :: Adaptive Technologies",
+]
 requires-python = ">=3.11,<3.15"   # onnxruntime has no wheels outside this range
 dependencies = [
   "kokoro-onnx>=0.4",
@@ -24,6 +39,12 @@ dependencies = [
   "pypdf",
   "wordfreq",
 ]
+
+[project.urls]
+Homepage = "https://github.com/muneebsajjad/sawt"
+Documentation = "https://github.com/muneebsajjad/sawt#readme"
+Issues = "https://github.com/muneebsajjad/sawt/issues"
+Changelog = "https://github.com/muneebsajjad/sawt/releases"
 
 [project.scripts]
 sawt = "sawt.cli:main"

@@ -16,7 +16,7 @@ ever sent to a server: the voice model ([Kokoro](https://huggingface.co/hexgrad/
 - **28 English voices**, American and British, with adjustable speed.
 
 > **Status: v0.1, early.** It works well for the author daily; expect rough edges.
-> Bug reports and contributions are very welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+> Bug reports and contributions are very welcome. See [CONTRIBUTING.md](https://github.com/muneebsajjad/sawt/blob/main/CONTRIBUTING.md).
 
 ## How it works
 
@@ -71,7 +71,7 @@ release)_. Its setup page checks that the engine is running.
 | Right-click selected text → **Read selection aloud** | Hear just that, when the page's article detection picks the wrong block |
 | Popup → voice / speed | Change it mid-article; reading continues from the current sentence |
 
-More: [docs/extension.md](docs/extension.md) (highlighting, resume, limits).
+More: [docs/extension.md](https://github.com/muneebsajjad/sawt/blob/main/docs/extension.md) (highlighting, resume, limits).
 
 ### Converting books
 
@@ -86,7 +86,7 @@ sawt build                               # -> ~/Sawt/out/<book>.m4b
 
 Or several at once, unattended: `sawt batch books/*.epub --voice af_bella --speed 0.85`.
 The full guide (voices, pronunciation fixes, trimming front matter, quality checks):
-[docs/books.md](docs/books.md).
+[docs/books.md](https://github.com/muneebsajjad/sawt/blob/main/docs/books.md).
 
 Run `sawt` with no arguments for every command.
 
@@ -116,7 +116,7 @@ English only for now. Firefox and Safari are not supported yet.
 - The engine makes one network request ever: the first-run model download, verified against
   pinned SHA-256 hashes.
 - The engine refuses requests from web pages and from other extensions. Details in
-  [SECURITY.md](SECURITY.md); the full policy is in [PRIVACY.md](PRIVACY.md).
+  [SECURITY.md](https://github.com/muneebsajjad/sawt/blob/main/SECURITY.md); the full policy is in [PRIVACY.md](https://github.com/muneebsajjad/sawt/blob/main/PRIVACY.md).
 
 ## Troubleshooting
 
@@ -142,8 +142,8 @@ Ideas and votes welcome in [issues](https://github.com/muneebsajjad/sawt/issues)
 ## Contributing
 
 Pull requests are welcome, from typo fixes to new features. Start with
-[CONTRIBUTING.md](CONTRIBUTING.md) (setup takes a couple of minutes) and
-[docs/architecture.md](docs/architecture.md) for a map of the code. Issues marked
+[CONTRIBUTING.md](https://github.com/muneebsajjad/sawt/blob/main/CONTRIBUTING.md) (setup takes a couple of minutes) and
+[docs/architecture.md](https://github.com/muneebsajjad/sawt/blob/main/docs/architecture.md) for a map of the code. Issues marked
 _good first issue_ are a gentle way in.
 
 ## Credits
@@ -160,4 +160,4 @@ copy of an in-copyright book is not allowed.
 
 ## Licence
 
-[MIT](LICENSE)
+[MIT](https://github.com/muneebsajjad/sawt/blob/main/LICENSE)
