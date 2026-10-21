@@ -73,7 +73,8 @@ user's own computer.
 
 **Data use disclosures:** Website content is handled only to produce speech, locally; not sold,
 not transferred, not used for anything else. Privacy policy URL:
-https://github.com/muneebsajjad/sawt/blob/main/PRIVACY.md
+https://gist.github.com/muneebsajjad/0e97037c47b62515afbfc8707ed116f7 (switch to the repo copy
+once the repo is public: https://github.com/muneebsajjad/sawt/blob/main/PRIVACY.md)
 
 **Assets to make:** at least one 1280×800 screenshot (popup + highlighted article), a 440×280
 promo tile, and the 30-second demo video for the launch posts.

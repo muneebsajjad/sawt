@@ -60,3 +60,6 @@ path = "src/sawt/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sawt"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["HANDOFF.md"]

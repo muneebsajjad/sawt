@@ -38,7 +38,7 @@ NO_BREAK_RE = re.compile(r'\b(?:Mr|Mrs|Ms|Dr|Prof|St|Mt|Jr|Sr|vs|cf|ca|vol|pp|p|
 KEY_RE = re.compile(r'^[0-9a-f]{24}$')
 # Extensions allowed to drive the server. Any extension the user installs can reach 127.0.0.1,
 # so the published one is pinned here; SAWT_EXTENSION_IDS adds a local unpacked copy.
-PUBLISHED_EXTENSION_IDS = set()          # fill in once the Chrome Web Store assigns the ID
+PUBLISHED_EXTENSION_IDS = {"onfpjncnceogmahnimecmbofiplglnge"}   # Chrome Web Store
 
 
 def split_sentences(para):

@@ -13,3 +13,6 @@ ECOSYSTEM.md
 .venv/
 dist/
 .pytest_cache/
+
+# Local working notes, never committed
+HANDOFF.md
