@@ -20,6 +20,11 @@ uv run pytest              # the text tests; no voice model needed
 Then load the extension: `chrome://extensions` → Developer mode → **Load unpacked** → pick
 `extension/`. After editing anything in `extension/`, press reload on its card.
 
+The unpacked copy gets the same extension ID as the Chrome Web Store version, because
+`manifest.json` carries the store's public `key`. The engine only answers that ID, so keep the
+key in place; to try a copy with a different ID, run `./sawt serve --allow-extension <its id>`.
+Turn the store version off while the unpacked one is loaded: both use `Alt+R`.
+
 A source checkout keeps books and output next to the code (`work/`, `out/`, both git-ignored).
 Set `SAWT_HOME` to put them elsewhere.
 

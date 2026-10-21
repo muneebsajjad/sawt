@@ -20,8 +20,11 @@ Then on a clean machine: `uv tool install sawt && sawt serve`.
 ## 2. Publish the extension
 
 ```bash
-cd extension && zip -r ../dist/extension-0.1.0.zip . -x '.*'
+uv run python scripts/pack_extension.py   # -> dist/extension-<version>.zip
 ```
+
+Bump `version` in `extension/manifest.json` first; the store rejects a version it has seen.
+The script drops the manifest's `key` field, which the store does not accept in uploads.
 
 Upload at https://chrome.google.com/webstore/devconsole (one-time $5 developer fee).
 
