@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/muneebsajjad/sawt/main/docs/assets/sawt-pixel.svg" width="256" alt="Pixel-art open book with sound bars bouncing above it">
+</p>
+
 # Sawt
 
 _صوت (sawt): Arabic for "voice" or "sound"._
