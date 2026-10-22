@@ -11,7 +11,9 @@ server, using the same normalization, `pronounce.json` and chunk cache as the bo
 sawt serve            # keep running; or once: sawt agent install (starts at login)
 ```
 
-Install it from the Chrome Web Store, or for a local copy: `chrome://extensions` → Developer mode → **Load unpacked** → pick `extension/`.
+Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/sawt-read-aloud-locally/onfpjncnceogmahnimecmbofiplglnge), or for a local copy: `chrome://extensions` →
+Developer mode → **Load unpacked** → pick `extension/` (remove the store version first; both
+have the same ID).
 Click the toolbar icon → **Read this page**, or press `Alt+R` (read / pause / resume). Right-click
 a selection → **Read selection aloud** for pages where article detection picks the wrong block.
 

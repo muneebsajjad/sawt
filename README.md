@@ -59,8 +59,8 @@ sawt serve        # first start downloads the voice model once (~350MB)
 On macOS, `sawt agent install` starts the engine at login instead, so you never think
 about it again.
 
-**2. Add the browser extension** from the Chrome Web Store _(link coming with the first store
-release)_. Its setup page checks that the engine is running.
+**2. Add the browser extension** from the [Chrome Web Store](https://chromewebstore.google.com/detail/sawt-read-aloud-locally/onfpjncnceogmahnimecmbofiplglnge).
+Its setup page checks that the engine is running.
 
 **3. Open any article and press `Alt+R`.**
 
@@ -100,7 +100,7 @@ Run `sawt` with no arguments for every command.
 |---|---|---|
 | `SAWT_HOME` | `~/Sawt` | Where books, output, the audio cache and `pronounce.json` live |
 | `SAWT_MODELS` | `~/.cache/sawt/models` | Where the voice model is stored |
-| `SAWT_EXTENSION_IDS` | the published extension | Extra extension IDs the engine accepts (comma-separated), e.g. a local unpacked copy |
+| `SAWT_EXTENSION_IDS` | the published extension | Extra extension IDs the engine accepts (comma-separated), e.g. a fork with its own ID |
 | `sawt serve --port` | `7865` | Port the engine listens on (the extension expects 7865) |
 | `pronounce.json` | — | Whole-word pronunciation fixes, e.g. `{"Gregor": "Gregg or"}` |
 
@@ -134,7 +134,6 @@ English only for now. Firefox and Safari are not supported yet.
 
 ## Roadmap
 
-- Chrome Web Store release, with the engine's extension ID pinned
 - Start at login on Linux and Windows
 - A desktop app that bundles the engine, so no terminal is needed
 - Firefox support

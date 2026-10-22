@@ -14,8 +14,9 @@ The engine (`sawt serve`) listens on `127.0.0.1:7865` and answers a request only
 - it carries the `X-Sawt: 1` header, which a web page cannot send without a CORS
   preflight, and preflights are always refused;
 - its `Origin` is absent (a local process) or is an allowed extension. Released builds pin the
-  published extension's ID; a local unpacked copy is added with `--allow-extension <id>` or
-  `SAWT_EXTENSION_IDS`. With no ID pinned, any extension is accepted, and the engine
+  published extension's ID. An unpacked copy of `extension/` gets that same ID, because the
+  manifest carries the store's public key; a copy with a different ID is added with
+  `--allow-extension <id>` or `SAWT_EXTENSION_IDS`. With no ID pinned, any extension is accepted, and the engine
   prints a warning at startup saying so.
 
 Anything that lets a web page, a remote host, or an unrelated extension make the engine speak,
