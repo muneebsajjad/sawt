@@ -86,3 +86,5 @@ button {
   border-radius: 8px;
 }
 #done p { margin: 0; }
+
+.hint { font-size: 0.9em; opacity: 0.8; }

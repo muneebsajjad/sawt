@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArmLSOGjoFijUl/rtL3g43QdH0NXex08ek+FQRzk4bcsZfBeMthfxdCLJ3bGu8dXUfZJgzI1+1/CvDkBAVXV+6M1NAAsZb+UCP7qUwFUiredpkX1/N1p1hAiANbYKLQbmP9whN54P1yAFTRNqOxgoXFG8PI7/0kL+w1ssXOFnvDE7NKMF1Ajb790QsY4D3kPRFfnqFQArwZrtOAYRRk+TltFrtitW4Q+GcDd+MtZ6XDn3juPMJvzNRT4y7oy/2QCpTKYR20WqUe9UbHlnmqKX7iAoBU0BJR1JHRP5jMiSPHhZBvKmu7UPGLy/yihtF2ImWs8CmLuSqGa9j1iG0DZUJQIDAQAB",
   "name": "Sawt: Read Aloud, Locally",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Listen to any article read aloud by a natural voice that runs on your own computer. Free, private, no cloud.",
   "action": {
     "default_popup": "popup.html",

@@ -53,11 +53,14 @@ Then:
 
 ```bash
 uv tool install sawt
-sawt serve        # first start downloads the voice model once (~350MB)
+sawt agent install   # downloads the voice model once (~350MB), then runs in the background
 ```
 
-On macOS, `sawt agent install` starts the engine at login instead, so you never think
-about it again.
+From then on the engine starts by itself when you log in and restarts if it stops, so there
+is no window to keep open. `sawt agent status` checks on it and `sawt agent uninstall` removes
+it. To run it only when you want, use `sawt serve` and keep that terminal open instead.
+
+After `uv tool upgrade sawt`, run `sawt agent install` again to restart on the new version.
 
 **2. Add the browser extension** from the [Chrome Web Store](https://chromewebstore.google.com/detail/sawt-read-aloud-locally/onfpjncnceogmahnimecmbofiplglnge).
 Its setup page checks that the engine is running.
@@ -108,9 +111,9 @@ Run `sawt` with no arguments for every command.
 
 | | Engine | Start at login | Extension |
 |---|---|---|---|
-| macOS | ✅ | ✅ `sawt agent install` | ✅ Chrome; other Chromium browsers should work |
-| Linux | ✅ | run `sawt serve` yourself | ✅ Chrome / Chromium |
-| Windows | ⚠️ expected to work, untested | run `sawt serve` yourself | ✅ Chrome |
+| macOS | ✅ | ✅ `sawt agent install` (launchd) | ✅ Chrome; other Chromium browsers should work |
+| Linux | ✅ | ⚠️ `sawt agent install` (systemd user service), new and lightly tested | ✅ Chrome / Chromium |
+| Windows | ⚠️ expected to work, untested | ⚠️ `sawt agent install` (Task Scheduler), new and untested | ✅ Chrome |
 
 English only for now. Firefox and Safari are not supported yet.
 
@@ -126,7 +129,7 @@ English only for now. Firefox and Safari are not supported yet.
 
 | Problem | Fix |
 |---|---|
-| Popup says the engine isn't running | Start it: `sawt serve`. Check it answers: `curl -H "X-Sawt: 1" http://127.0.0.1:7865/health` |
+| Popup says the engine isn't running | `sawt agent status`, then `sawt agent install` to (re)start it. The log is `~/Sawt/work/serve.log`. Check it answers: `curl -H "X-Sawt: 1" http://127.0.0.1:7865/health` |
 | `sawt: command not found` after install | Open a new terminal, or run `uv tool update-shell` |
 | Nothing is read on a page | Scroll first if the page loads text lazily, or select the text and right-click → **Read selection aloud** |
 | A name is mispronounced | Add it to `pronounce.json` in `SAWT_HOME` with a phonetic spelling |
@@ -134,7 +137,6 @@ English only for now. Firefox and Safari are not supported yet.
 
 ## Roadmap
 
-- Start at login on Linux and Windows
 - A desktop app that bundles the engine, so no terminal is needed
 - Firefox support
 - More languages (Kokoro has voices for Spanish, French, Hindi, Italian, Japanese, Portuguese

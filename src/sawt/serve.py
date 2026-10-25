@@ -13,6 +13,7 @@ import json
 import os
 import pathlib
 import re
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -149,6 +150,7 @@ class Engine:
             cached = self.path(piece["key"])
             # same .part + rename as synth.py: a kill mid-write must not leave a wav we trust
             tmp = cached.with_suffix(".part")
+            tmp.parent.mkdir(parents=True, exist_ok=True)   # the cache may be deleted under us
             sf.write(tmp, np.asarray(audio, dtype="float32"), sr, format="WAV")
             tmp.replace(cached)
             with self.cond:
@@ -260,6 +262,13 @@ def main():
     ap.add_argument("--allow-extension", action="append", default=[], metavar="ID",
                     help="also accept this extension ID (e.g. an unpacked dev copy)")
     args = ap.parse_args()
+
+    if sys.stdout is None or sys.stderr is None:   # pythonw (Windows background task): no console
+        paths.WORK.mkdir(parents=True, exist_ok=True)
+        sys.stdout = sys.stderr = open(paths.WORK / "serve.log", "a", buffering=1, encoding="utf-8")
+    elif sys.stdout.isatty():
+        print("tip: `sawt agent install` runs this in the background from login, "
+              "so you can close this window", flush=True)
 
     dpath = pathlib.Path(args.dict)
     print("loading Kokoro…", flush=True)

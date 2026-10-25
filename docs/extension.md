@@ -8,7 +8,7 @@ How reading a web page works, in detail. For setup, see the [README](../README.m
 server, using the same normalization, `pronounce.json` and chunk cache as the books.
 
 ```bash
-sawt serve            # keep running; or once: sawt agent install (starts at login)
+sawt agent install    # once: runs in the background from login; or `sawt serve` in a terminal
 ```
 
 Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/sawt-read-aloud-locally/onfpjncnceogmahnimecmbofiplglnge), or for a local copy: `chrome://extensions` →

@@ -29,11 +29,13 @@
       <pre><code id="install-cmd"></code></pre>
     </li>
     <li>
-      <h2>Start it</h2>
-      <pre><code>sawt serve</code></pre>
-      <p>The first start downloads the voice model once (about 350MB). Leave the window open
-        while you listen. On macOS, <code>sawt agent install</code> starts it at login
-        instead, so you never think about it again.</p>
+      <h2>Start it, once</h2>
+      <pre><code>sawt agent install</code></pre>
+      <p>Downloads the voice model (about 350MB, one time), then keeps the engine running in
+        the background: it starts by itself when you log in and restarts if it stops. You can
+        close the window when it finishes.</p>
+      <p class="hint">Rather run it only when you need it? <code>sawt serve</code> works too,
+        as long as that window stays open.</p>
     </li>
   </ol>
 

@@ -51,8 +51,9 @@ travels from a web page to your speakers.
   case, and converts Roman numerals before abbreviations, so `Ch. XIV` never becomes "chapter
   fourteen". `tests/test_text.py::test_normalize_abbreviated_chapter` is the failing test; make
   it pass and remove its `xfail` marker.
-- **Start at login on Linux.** `sawt agent` is macOS-only (launchd). A systemd user unit
-  would cover most Linux desktops; see `agent()` in `src/sawt/cli.py`.
+- **Try the background engine on Linux or Windows.** `sawt agent install` registers a systemd
+  user service or a Task Scheduler logon task (`src/sawt/agent.py`), but only macOS has been
+  used for real. Install it, log out and back in, kill the engine, and report what happened.
 - **Firefox.** The extension uses Manifest V3 and the offscreen API; Firefox needs a different
   way to keep audio playing after the popup closes.
 
