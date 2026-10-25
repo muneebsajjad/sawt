@@ -1,106 +1,143 @@
 :root {
-  --bg: #faf9f7;
-  --fg: #1f1e1c;
-  --muted: #6b6862;
-  --line: #e2dfd9;
-  --accent: #c2603a;
+  --bg: #ffffff;
+  --fg: #16181d;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --surface: #f5f6f8;
+  --btn: #f1f2f5;
+  --btn-hover: #e6e8ec;
+  --accent: #0d9488;
   --accent-fg: #ffffff;
-  --btn: #efece7;
-  --err: #b3261e;
+  --soft: #e6f6f4;
+  --err: #b42318;
+  --err-bg: #fef3f2;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1c1b19;
-    --fg: #ecebe8;
-    --muted: #9a968f;
-    --line: #34322e;
-    --accent: #d9774f;
-    --btn: #2a2825;
-    --err: #f2b8b5;
+    --bg: #15161b;
+    --fg: #ececf1;
+    --muted: #9a9ca8;
+    --line: #2a2c35;
+    --surface: #1d1f26;
+    --btn: #22242c;
+    --btn-hover: #2c2f39;
+    --accent: #2dd4bf;
+    --accent-fg: #06201d;
+    --soft: #10302d;
+    --err: #fda29b;
+    --err-bg: #2d1514;
   }
 }
 * { box-sizing: border-box; }
 body {
   width: 320px;
   margin: 0;
-  padding: 14px;
+  padding: 16px;
   background: var(--bg);
   color: var(--fg);
-  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-header { margin-bottom: 10px; }
+header { margin-bottom: 12px; }
 #title {
   font-weight: 600;
   font-size: 14px;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .muted { color: var(--muted); }
+#status { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12px; }
+#status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: none;
+}
+#status[data-state="playing"]::before { background: var(--accent); box-shadow: 0 0 0 3px var(--soft); }
+#status[data-state="paused"]::before,
+#status[data-state="loading"]::before { background: var(--muted); }
+#status[data-state="error"]::before { background: var(--err); }
 #sentence {
-  min-height: 0;
-  margin: 0 0 10px;
-  font-style: italic;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--fg);
+  font-size: 13.5px;
+  line-height: 1.5;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 #sentence:empty { display: none; }
+#progress { height: 4px; border-radius: 2px; background: var(--line); margin: 0 0 12px; overflow: hidden; }
+#progress[hidden] { display: none; }
+#progress i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 2px; transition: width .3s; }
 #error {
-  margin: 0 0 10px;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid var(--err);
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--err-bg);
   color: var(--err);
   user-select: text;
 }
 button {
   font: inherit;
-  border: 1px solid var(--line);
-  background: var(--btn);
   color: var(--fg);
-  border-radius: 6px;
-  padding: 6px 10px;
+  background: var(--btn);
+  border: 0;
+  border-radius: 10px;
+  padding: 7px 10px;
   cursor: pointer;
+  transition: background .15s;
 }
+button:hover:not(:disabled) { background: var(--btn-hover); }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button:disabled { opacity: 0.4; cursor: default; }
 button.primary {
   width: 100%;
   background: var(--accent);
-  border-color: var(--accent);
   color: var(--accent-fg);
   font-weight: 600;
-  padding: 8px;
+  padding: 10px;
+  border-radius: 12px;
 }
+button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.07); }
 #controls {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  margin: 10px 0;
+  margin: 10px 0 12px;
 }
+#controls button { padding: 8px 0; }
+#controls #toggle:not(:disabled) { background: var(--soft); color: var(--accent); }
 #settings {
   display: flex;
   gap: 10px;
-  padding-top: 10px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 #settings label {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11.5px;
 }
 select {
   font: inherit;
+  font-size: 13px;
   color: var(--fg);
-  background: var(--btn);
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px;
+  border-radius: 10px;
+  padding: 7px 8px;
 }
 footer { margin-top: 10px; font-size: 11px; }
 #resumed {
@@ -108,11 +145,11 @@ footer { margin-top: 10px; font-size: 11px; }
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--muted);
   font-size: 12px;
 }
 #resumed[hidden] { display: none; }
-#setup p { margin: 0 0 10px; }
+#resumed button { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+#setup p { margin: 0 0 12px; }
 #controls[hidden], #settings[hidden], #read[hidden] { display: none; }
-#resumed button { padding: 3px 8px; font-size: 12px; }

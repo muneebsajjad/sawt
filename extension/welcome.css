@@ -1,26 +1,28 @@
 :root {
-  --bg: #faf9f7;
-  --fg: #1f1e1c;
-  --muted: #6b6862;
-  --line: #e2dfd9;
-  --accent: #c2603a;
-  --btn: #efece7;
-  --code: #f1eee9;
-  --ok: #2e7d4f;
-  --warn: #a8641c;
+  --bg: #ffffff;
+  --fg: #16181d;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #0d9488;
+  --soft: #e6f6f4;
+  --btn: #f1f2f5;
+  --code: #f5f6f8;
+  --ok: #0d9488;
+  --warn: #b54708;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1c1b19;
-    --fg: #ecebe8;
-    --muted: #9a968f;
-    --line: #34322e;
-    --accent: #d9774f;
-    --btn: #2a2825;
-    --code: #252421;
-    --ok: #7fcf9c;
-    --warn: #e8b06a;
+    --bg: #15161b;
+    --fg: #ececf1;
+    --muted: #9a9ca8;
+    --line: #2a2c35;
+    --accent: #2dd4bf;
+    --soft: #10302d;
+    --btn: #22242c;
+    --code: #1d1f26;
+    --ok: #2dd4bf;
+    --warn: #fdb022;
   }
 }
 * { box-sizing: border-box; }
@@ -31,11 +33,11 @@ body {
   font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 main { max-width: 640px; margin: 0 auto; padding: 48px 16px 64px; }
-h1 { font-size: 26px; margin: 0 0 8px; }
+h1 { font-size: 26px; margin: 0 0 8px; letter-spacing: -0.02em; }
 h2 { font-size: 16px; margin: 0 0 6px; }
 .lede { color: var(--muted); margin: 0 0 24px; }
 code, kbd, pre { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-p code, kbd { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+p code, kbd { background: var(--code); padding: 1px 5px; border-radius: 6px; }
 
 .status {
   display: flex;
@@ -43,12 +45,12 @@ p code, kbd { background: var(--code); padding: 1px 5px; border-radius: 4px; }
   gap: 10px;
   padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   margin-bottom: 28px;
 }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
-.status[data-state="ok"] { border-color: var(--ok); }
-.status[data-state="ok"] .dot { background: var(--ok); }
+.status[data-state="ok"] { border-color: var(--ok); background: var(--soft); }
+.status[data-state="ok"] .dot { background: var(--ok); box-shadow: 0 0 0 3px var(--bg); }
 .status[data-state="missing"] .dot { background: var(--warn); }
 
 ol { padding-left: 20px; margin: 0; }
@@ -61,7 +63,7 @@ pre {
   padding: 12px 70px 12px 12px;
   background: var(--code);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
@@ -72,7 +74,7 @@ button {
   color: var(--fg);
   background: var(--btn);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 4px 10px;
   cursor: pointer;
 }
@@ -82,8 +84,9 @@ button {
 
 #done {
   padding: 16px;
+  background: var(--soft);
   border: 1px solid var(--ok);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 #done p { margin: 0; }
 

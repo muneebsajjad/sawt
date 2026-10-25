@@ -9,15 +9,18 @@ function render(p = { status: "idle" }) {
   const active = p.status === "playing" || p.status === "paused";
 
   $("title").textContent = p.title || "Sawt";
+  $("status").dataset.state = p.status;
   $("status").textContent = {
     idle: "Idle",
     loading: "Reading the page…",
-    playing: `Playing · ${p.index + 1} / ${total}`,
-    paused: `Paused · ${p.index + 1} / ${total}`,
+    playing: `Playing · ${p.index + 1} of ${total}`,
+    paused: `Paused · ${p.index + 1} of ${total}`,
     error: "Stopped",
   }[p.status] || p.status;
   const c = active ? p.chunks[p.index] : null;
   $("sentence").textContent = c ? p.sentences?.[c.sentence] ?? c.text : "";
+  $("progress").hidden = !active;
+  if (active) $("progress").firstElementChild.style.width = `${((p.index + 1) / total) * 100}%`;
 
   $("resumed").hidden = !(active && p.resumedFrom);
   $("error").hidden = p.status !== "error";
@@ -37,10 +40,17 @@ async function checkEngine() {
   return ok;
 }
 
+// "af_bella" -> "Bella · US": Kokoro's ids start with a for American English, b for British.
+function voiceLabel(id) {
+  const [, accent, name] = id.match(/^([ab])[fm]_(.+)$/) || [, "", id];
+  const nice = name.charAt(0).toUpperCase() + name.slice(1);
+  return accent ? `${nice} · ${accent === "a" ? "US" : "UK"}` : id;
+}
+
 async function loadSettings() {
   const s = { ...DEFAULTS, ...(await chrome.storage.local.get(["voice", "speed"])) };
   const voices = (await send("voices")) || [s.voice];
-  $("voice").replaceChildren(...voices.map((v) => new Option(v, v, false, v === s.voice)));
+  $("voice").replaceChildren(...voices.map((v) => new Option(voiceLabel(v), v, false, v === s.voice)));
   $("speed").value = String(s.speed);
 }
 
