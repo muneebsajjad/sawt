@@ -21,7 +21,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 import soundfile as sf
 
-from . import __version__, models, paths
+from . import __version__, glossary, models, paths, wordtime
 from .synth import apply_dict, chunk, chunk_key, load_dict
 from .textnorm import normalize
 
@@ -55,9 +55,10 @@ def split_sentences(para):
 class Session:
     """The one article currently being read."""
 
-    def __init__(self, sid, pieces, voice, speed, start):
+    def __init__(self, sid, pieces, sentences, voice, speed, start):
         self.sid = sid
         self.pieces = pieces          # [{"key", "text", "para_end", "sentence"}]
+        self.sentences = sentences    # as on the page, for matching word timings back to it
         self.voice = voice
         self.speed = speed
         self.cursor = start           # index the player most recently asked for
@@ -75,11 +76,14 @@ class Session:
 class Engine:
     def __init__(self, cache, pron_path):
         self.kokoro = models.load()
+        # only model-files-v1.1+ report when each phoneme is spoken; older ones read fine
+        self.timed = getattr(self.kokoro, "has_timings", False)
         self.voices = sorted(v for v in self.kokoro.get_voices() if v[0] in "ab")
         self.kokoro.create("Ready.", voice="af_bella", speed=1.0, lang="en-us")   # cold start
         self.cache = cache
         self.cache.mkdir(parents=True, exist_ok=True)
         self.pron_path = pron_path
+        self.glossary = None          # set once the background download/open finishes
         self.session = None
         self.next_sid = 1
         self.cond = threading.Condition()
@@ -87,6 +91,25 @@ class Engine:
 
     def path(self, key):
         return self.cache / f"{key}.wav"
+
+    def timing_path(self, key):
+        return self.cache / f"{key}.words.json"
+
+    def ready(self, key):
+        """On disk, with its word timings when the model can report them. A wav cached by a
+        model without timings is synthesized again, so word following works on old articles."""
+        return self.path(key).exists() and (not self.timed or self.timing_path(key).exists())
+
+    def word_times(self, key):
+        """[[char_start, char_end, t_start, t_end], ...] for the live article's chunk `key`,
+        in characters of its sentence as the page shows it; None if not known."""
+        s = self.session
+        tp = self.timing_path(key)
+        if s is None or key not in s.positions or not tp.exists():
+            return None
+        piece = s.pieces[s.positions[key][0]]
+        spoken = [tuple(w) for w in json.loads(tp.read_text())["words"]]
+        return wordtime.align(s.sentences[piece["sentence"]], piece["text"], spoken)
 
     def plan(self, text):
         """Spoken chunks plus the original sentences they came from.
@@ -116,7 +139,8 @@ class Engine:
         chunks, sentences = self.plan(text)
         pieces = [dict(c, key=chunk_key(c["text"], voice, speed)) for c in chunks]
         with self.cond:
-            s = Session(self.next_sid, pieces, voice, speed, min(start, max(len(pieces) - 1, 0)))
+            s = Session(self.next_sid, pieces, sentences, voice, speed,
+                        min(start, max(len(pieces) - 1, 0)))
             self.next_sid += 1
             self.session = s
             self.cond.notify_all()
@@ -133,7 +157,7 @@ class Engine:
         if s is None:
             return None
         for i in range(s.cursor, min(s.cursor + LOOKAHEAD + 1, len(s.pieces))):
-            if not self.path(s.pieces[i]["key"]).exists():
+            if not self.ready(s.pieces[i]["key"]):
                 return s, s.pieces[i]
         return None
 
@@ -145,13 +169,24 @@ class Engine:
                     self.cond.wait()
                     job = self._next_job()
             s, piece = job
-            audio, sr = self.kokoro.create(piece["text"], voice=s.voice, speed=s.speed,
-                                           lang="en-us")
+            if self.timed:
+                audio, sr, timings = self.kokoro.create_timed(piece["text"], voice=s.voice,
+                                                              speed=s.speed, lang="en-us")
+                words = wordtime.spoken_words(timings)
+            else:
+                audio, sr = self.kokoro.create(piece["text"], voice=s.voice, speed=s.speed,
+                                               lang="en-us")
             cached = self.path(piece["key"])
             # same .part + rename as synth.py: a kill mid-write must not leave a wav we trust
             tmp = cached.with_suffix(".part")
             tmp.parent.mkdir(parents=True, exist_ok=True)   # the cache may be deleted under us
             sf.write(tmp, np.asarray(audio, dtype="float32"), sr, format="WAV")
+            if self.timed:
+                # timings first: a wav on disk is what readers wait for
+                tt = self.timing_path(piece["key"]).with_suffix(".part")
+                tt.write_text(json.dumps({"words": [[round(a, 3), round(b, 3)]
+                                                    for a, b in words]}))
+                tt.replace(self.timing_path(piece["key"]))
             tmp.replace(cached)
             with self.cond:
                 self.cond.notify_all()
@@ -164,9 +199,9 @@ class Engine:
             if s is not None and key in s.positions:
                 s.cursor = s.position(key)
                 self.cond.notify_all()
-            elif not self.path(key).exists():
+            elif not self.ready(key):
                 return None                          # not part of the live article
-            while not self.path(key).exists():
+            while not self.ready(key):
                 left = deadline - time.time()
                 if left <= 0 or self.session is not s:
                     return None
@@ -214,6 +249,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True, "version": __version__})
         if self.path == "/voices":
             return self._send(200, {"voices": self.engine.voices})
+        m = re.match(r'^/chunk/([0-9a-f]+)\.words\.json$', self.path)
+        if m and KEY_RE.match(m.group(1)):
+            words = self.engine.word_times(m.group(1))
+            if words is None:
+                return self._send(404, {"error": "no word timings for this chunk"})
+            return self._send(200, {"words": words})
         m = re.match(r'^/chunk/([0-9a-f]+)\.wav$', self.path)
         if m and KEY_RE.match(m.group(1)):
             p = self.engine.wait_for(m.group(1))
@@ -250,8 +291,9 @@ class Handler(BaseHTTPRequestHandler):
             if not text.strip():
                 return self._send(400, {"error": "no text"})
             s, sentences = self.engine.start(text, voice, speed, int(req.get("start", 0)))
+            words = glossary.hard_words(sentences, self.engine.glossary, text)
             return self._send(200, {"session": s.sid, "chunks": s.pieces,
-                                    "sentences": sentences})
+                                    "sentences": sentences, "words": words})
         self._send(404, {"error": "not found"})
 
 
@@ -273,6 +315,7 @@ def main():
     dpath = pathlib.Path(args.dict)
     print("loading Kokoro…", flush=True)
     Handler.engine = Engine(paths.CACHE, dpath if dpath.is_absolute() else paths.ROOT / dpath)
+    glossary.load_in_background(Handler.engine)
     Handler.port = args.port
     env_ids = os.environ.get("SAWT_EXTENSION_IDS", "")
     Handler.extension_ids = (PUBLISHED_EXTENSION_IDS | set(args.allow_extension)
