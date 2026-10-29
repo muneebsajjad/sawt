@@ -36,6 +36,25 @@ popup. The position is matched by sentence text, so an article edited since stil
 right place. Finishing an article forgets it; the 300 most recent pages are kept. Selections
 are never saved.
 
+**Meanings of hard words.** When a sentence holds a word most readers would look up, a card
+beside the article explains it while the sentence is read; reading never pauses. Meanings come
+from two places, both on your computer: an acronym the article spells out itself ("maximum
+allowable operating pressure (MAOP)"), and otherwise a glossary of short Wiktionary meanings
+(~15MB, downloaded once). "Hard" means rare in everyday English, by
+[wordfreq](https://github.com/rspeer/wordfreq)'s scale; the popup's **Explain hard words for**
+picks the cut-off (an advanced reader sees fewest cards). **Don't explain again** hides a word
+for good, with an Undo; `Esc` closes the cards. The popup lists every word explained on the page.
+
+**Word zoom.** With **Zoom the word being read** on (off by default), the word being spoken is
+drawn slightly magnified over the page. The voice model reports when each speech sound is
+spoken; the engine groups those into words and matches them to the page's text, so "$5m" on the
+page follows "five million dollars" in the audio. A sentence where the model counts words
+differently from the text (some long numbers) falls back to an estimate. The page's text is
+never modified, and the zoom does not animate when the system asks for reduced motion.
+
+**Appearance.** Auto (follow the system), Light or Dark, for the popup, the cards and the setup
+page.
+
 How it fits together: `content.js` runs Mozilla's Readability on the page and rebuilds paragraph
 breaks; `background.js` posts the text to `127.0.0.1:7865/read`; `offscreen.js` plays the
 returned sentence wavs in order. Changing voice or speed in the popup re-requests the rest of

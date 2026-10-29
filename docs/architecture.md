@@ -12,6 +12,8 @@ Two programs that only meet over `127.0.0.1:7865`:
 │ offscreen.js  plays wavs  ◀───┼─────────────┤          speed)                     │
 │                               │ GET /chunk  │   Kokoro (ONNX, CPU) → cache/*.wav  │
 │ highlight.js  CSS Highlight   │   /<key>.wav│   worker stays 6 chunks ahead       │
+│   meaning cards, word zoom    │ /<key>.words│   word timings beside each wav      │
+│                               │       .json │   glossary.sqlite → hard words      │
 └──────────────────────────────┘             └─────────────────────────────────────┘
 ```
 
@@ -26,6 +28,8 @@ the browser.
 | `models.py` | Finds the Kokoro model files, downloads and SHA-256-checks them on first use |
 | `paths.py` | Where files live (`SAWT_HOME`, a source checkout, or `~/Sawt`), per-book directories, the active book |
 | `serve.py` | The local HTTP server for the extension: sessions, lookahead worker, origin checks |
+| `glossary.py` | Hard words in an article and their meanings: the downloaded Wiktionary glossary, acronyms the article defines itself, rarity from `wordfreq` |
+| `wordtime.py` | When each word is spoken: groups the model's phoneme timings into words and matches them back to the words on the page |
 | `textnorm.py` | Numbers, abbreviations, roman numerals, currency → spoken form |
 | `synth.py` | Chunk → normalize → dictionary → synthesize → cache → one wav per chapter |
 | `extract.py` | EPUB/PDF/TXT → `chapters.json`. De-hyphenates, strips footnote markers and page numbers, cuts Project Gutenberg boilerplate |
@@ -49,14 +53,16 @@ the browser.
 | `background.js` | The service worker. Owns reading state, talks to the engine, saves positions |
 | `content.js` | Runs Mozilla's Readability on the page and rebuilds paragraph breaks |
 | `offscreen.js` | Plays the sentence wavs in order; the only part that touches audio |
-| `highlight.js` | Highlights the sentence being spoken with the CSS Highlight API, without touching the page's markup |
-| `popup.*` | The toolbar popup: controls, voice and speed, the setup prompt |
+| `highlight.js` | Highlights the sentence being spoken with the CSS Highlight API, without touching the page's markup; draws the meaning cards and the word zoom in a closed shadow root |
+| `popup.*` | The toolbar popup: controls, voice and speed, meanings, word zoom, appearance, the setup prompt |
+| `theme.js` | Applies the Auto / Light / Dark choice to the extension's own pages |
 | `welcome.*` | First-run setup page with a live check for the engine |
 | `vendor/Readability.js` | Mozilla Readability, Apache-2.0, unmodified |
 
 ## Design rules
 
-- **Local only.** The engine's only outbound request is the one-time model download.
+- **Local only.** The engine's only outbound requests are the one-time downloads of the voice
+  model and the glossary, each checked against a pinned SHA-256.
 - **Everything resumable.** Chunks are content-addressed, so an interrupted book resumes and an
   edited paragraph is the only thing regenerated.
 - **Split before normalizing.** The extension highlights by sentence, so each chunk must point

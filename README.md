@@ -15,11 +15,15 @@ ever sent to a server: the voice model ([Kokoro](https://huggingface.co/hexgrad/
 
 - **Read any article aloud** from the browser: one click or `Alt+R`. Menus, ads and sidebars
   are skipped, the sentence being spoken is highlighted, and every page resumes where you left off.
+- **Meanings of hard words as you listen.** When a sentence holds a word like "myopic", a small
+  card beside the article explains it, from an offline dictionary or from the article itself
+  ("maximum allowable operating pressure (MAOP)"). Reading never pauses.
+- **Follow along word by word**, optionally: the word being spoken can be gently magnified.
 - **Convert books** (EPUB, PDF, TXT) into `.m4b` audiobooks with chapter markers, mastered to
   audiobook loudness standards.
 - **28 English voices**, American and British, with adjustable speed.
 
-> **Status: v0.1, early.** It works well for the author daily; expect rough edges.
+> **Status: v0.2, early.** It works well for the author daily; expect rough edges.
 > Bug reports and contributions are very welcome. See [CONTRIBUTING.md](https://github.com/muneebsajjad/sawt/blob/main/CONTRIBUTING.md).
 
 ## How it works
@@ -102,7 +106,8 @@ Run `sawt` with no arguments for every command.
 | Setting | Default | What it does |
 |---|---|---|
 | `SAWT_HOME` | `~/Sawt` | Where books, output, the audio cache and `pronounce.json` live |
-| `SAWT_MODELS` | `~/.cache/sawt/models` | Where the voice model is stored |
+| `SAWT_MODELS` | `~/.cache/sawt/models` | Where the voice model and the glossary are stored |
+| `SAWT_GLOSSARY` | (downloaded) | Use this glossary file instead, e.g. one built with `scripts/build_glossary.py` |
 | `SAWT_EXTENSION_IDS` | the published extension | Extra extension IDs the engine accepts (comma-separated), e.g. a fork with its own ID |
 | `sawt serve --port` | `7865` | Port the engine listens on (the extension expects 7865) |
 | `pronounce.json` | — | Whole-word pronunciation fixes, e.g. `{"Gregor": "Gregg or"}` |
@@ -120,8 +125,8 @@ English only for now. Firefox and Safari are not supported yet.
 ## Privacy and security
 
 - The extension reads a page only when you ask, and sends its text only to `127.0.0.1`.
-- The engine makes one network request ever: the first-run model download, verified against
-  pinned SHA-256 hashes.
+- The engine makes network requests only to download two files once, on first start: the voice
+  model and the word glossary, both from GitHub and both verified against pinned SHA-256 hashes.
 - The engine refuses requests from web pages and from other extensions. Details in
   [SECURITY.md](https://github.com/muneebsajjad/sawt/blob/main/SECURITY.md); the full policy is in [PRIVACY.md](https://github.com/muneebsajjad/sawt/blob/main/PRIVACY.md).
 
@@ -157,6 +162,9 @@ _good first issue_ are a gentle way in.
 - [kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx), which runs it on the CPU (MIT)
 - [Readability](https://github.com/mozilla/readability) by Mozilla, which finds the article on
   a page (Apache-2.0)
+- Word meanings come from [Wiktionary](https://en.wiktionary.org) (CC BY-SA 4.0), via the
+  [Kaikki.org](https://kaikki.org) extraction; word frequencies from
+  [wordfreq](https://github.com/rspeer/wordfreq)
 - Pronunciation falls back to [espeak-ng](https://github.com/espeak-ng/espeak-ng) (GPL-3.0),
   installed as a dependency of kokoro-onnx
 

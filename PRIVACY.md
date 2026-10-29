@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 20 October 2026_
+_Last updated: 30 October 2026_
 
 Sawt reads web pages aloud using a voice engine that runs on your own computer.
 It is built so that what you read never leaves your machine.
@@ -14,7 +14,8 @@ It is built so that what you read never leaves your machine.
 - **Your reading position.** The last sentence you heard on each page is saved in your browser's
   extension storage, so reading the page again resumes where you stopped. The 300 most recent
   pages are kept; finishing an article deletes its entry. This never leaves your browser.
-- **Your voice and speed settings**, stored the same way.
+- **Your settings** (voice, speed, how many hard words to explain, word zoom, appearance) and the
+  words you marked "Don't explain again", stored the same way. They never leave your browser.
 
 ## What it does not do
 
@@ -26,8 +27,12 @@ It is built so that what you read never leaves your machine.
 
 The engine (`sawt serve`) is open-source software you install and run yourself. It turns text
 into speech on your computer and keeps a cache of generated audio on your disk, which you can
-delete at any time. The only network access it ever makes is a one-time download of the voice
-model files from the kokoro-onnx GitHub releases page the first time it starts.
+delete at any time. The only network access it ever makes is a one-time download, the first time it starts, of
+the voice model (from the kokoro-onnx GitHub releases page) and of the word glossary (from
+Sawt's own GitHub releases page). Word meanings are looked up in that file on your computer;
+the words you read are never sent anywhere to be defined.
+
+A meaning card has a "From Wiktionary" link. Wiktionary is contacted only if you click it.
 
 ## Contact
 

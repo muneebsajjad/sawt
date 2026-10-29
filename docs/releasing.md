@@ -8,6 +8,23 @@ The name is **Sawt** (صوت, "voice"). It appears as:
 | PyPI package | `pyproject.toml` `name`, `extension/welcome.js` `PACKAGE`, README |
 | CLI command | `pyproject.toml` `[project.scripts]` |
 
+## 0. Publish the glossary (only when it changes)
+
+The engine downloads `glossary.sqlite.xz` from this repo's GitHub release named
+`glossary-<VERSION>` (`src/sawt/glossary.py`), so that release must exist before an engine that
+points at it is published.
+
+```bash
+curl -LO https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl.gz   # ~530MB
+uv run python scripts/build_glossary.py kaikki.org-dictionary-English.jsonl.gz dist/glossary.sqlite
+xz -9 -k dist/glossary.sqlite && shasum -a 256 dist/glossary.sqlite.xz
+gh release create glossary-<VERSION> dist/glossary.sqlite.xz \
+  --title "Glossary <VERSION>" --notes "Word meanings from Wiktionary (CC BY-SA 4.0) via Kaikki.org."
+```
+
+Put the new `VERSION` and SHA-256 in `src/sawt/glossary.py`. Wiktionary text is CC BY-SA, so
+the file is never bundled into the MIT-licensed package.
+
 ## 1. Publish the engine to PyPI
 
 ```bash
@@ -54,6 +71,9 @@ For a local unpacked copy, run `sawt serve --allow-extension <its id>`.
 > • Picks up where you left off on every page
 > • 28 English voices, American and British, adjustable speed
 > • Right-click any selection to hear just that
+> • Meanings of hard words appear beside the article as you listen, from an offline dictionary
+> • Optionally magnify each word as it is spoken, to follow along
+> • Light and dark appearance
 >
 > Requires the free local voice engine (one command to install; setup steps open after install).
 > macOS, Linux and Windows. English only for now.
@@ -68,7 +88,7 @@ user's own computer.
 | `activeTab` | Read the article text of the tab the user asks to hear, only when they ask |
 | `scripting` | Inject the article extractor and the sentence highlighter into that tab |
 | `offscreen` | Play audio from a background document, so reading continues after the popup closes |
-| `storage` | Remember voice, speed and the last sentence read on each page |
+| `storage` | Remember settings, words the reader marked as known, and the last sentence read on each page |
 | `contextMenus` | The "Read selection aloud" and "Read this page aloud" right-click items |
 | Host `http://127.0.0.1:7865/*` | Talk to the voice engine running on the user's own computer; no remote host is contacted |
 
