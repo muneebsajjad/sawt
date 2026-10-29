@@ -13,8 +13,25 @@
   --err-bg: #fef3f2;
   color-scheme: light dark;
 }
+/* Dark when chosen in the popup, or when the system is dark and light was not chosen. */
+:root[data-theme="dark"] {
+  --bg: #15161b;
+  --fg: #ececf1;
+  --muted: #9a9ca8;
+  --line: #2a2c35;
+  --surface: #1d1f26;
+  --btn: #22242c;
+  --btn-hover: #2c2f39;
+  --accent: #2dd4bf;
+  --accent-fg: #06201d;
+  --soft: #10302d;
+  --err: #fda29b;
+  --err-bg: #2d1514;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #15161b;
     --fg: #ececf1;
     --muted: #9a9ca8;
@@ -105,7 +122,7 @@ button.primary {
   color: var(--accent-fg);
   font-weight: 600;
   padding: 10px;
-  border-radius: 12px;
+  border-radius: 10px;
 }
 button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.07); }
 #controls {
@@ -118,6 +135,7 @@ button.primary:hover:not(:disabled) { background: var(--accent); filter: brightn
 #controls #toggle:not(:disabled) { background: var(--soft); color: var(--accent); }
 #settings {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
@@ -139,6 +157,83 @@ select {
   border-radius: 10px;
   padding: 7px 8px;
 }
+#settings label.wide { flex-basis: 100%; }
+/* Appearance: three linked buttons, all options visible at once (elementary HIG) */
+.segmented {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.segmented > div {
+  display: flex;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.segmented label { position: relative; }
+.segmented input { position: absolute; opacity: 0; pointer-events: none; }
+.segmented label span {
+  display: block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.segmented input:checked + span { background: var(--bg); color: var(--fg); font-weight: 600;
+                                  box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.segmented input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.switch[hidden] { display: none; }
+.switch input {
+  appearance: none;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  margin: 0;
+  border-radius: 10px;
+  background: var(--line);
+  position: relative;
+  cursor: pointer;
+  transition: background .15s;
+}
+.switch input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  transition: transform .15s;
+}
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { transform: translateX(14px); }
+.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#words { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+#words[hidden] { display: none; }
+#words summary { cursor: pointer; font-weight: 600; font-size: 12.5px; }
+#words ul { list-style: none; margin: 8px 0 0; padding: 0; max-height: 180px; overflow-y: auto; }
+#words li { padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+#words li:last-child { border-bottom: 0; }
+#words li b { color: var(--accent); margin-right: 2px; }
 footer { margin-top: 10px; font-size: 11px; }
 #resumed {
   display: flex;
@@ -150,6 +245,6 @@ footer { margin-top: 10px; font-size: 11px; }
   font-size: 12px;
 }
 #resumed[hidden] { display: none; }
-#resumed button { padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+#resumed button { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
 #setup p { margin: 0 0 12px; }
 #controls[hidden], #settings[hidden], #read[hidden] { display: none; }

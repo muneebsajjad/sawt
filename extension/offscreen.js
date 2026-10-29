@@ -3,6 +3,7 @@
 const SERVER = "http://127.0.0.1:7865";
 const GAP_SENTENCE = 180;   // ms, same pauses as a book
 const GAP_PARA = 550;
+const WORD_TICK = 40;        // ms between checks of which word is being spoken
 
 const audio = new Audio();
 let chunks = [];
@@ -11,6 +12,9 @@ let playing = false;
 let finished = false;        // current chunk ended, next not started (paused inside a gap)
 let gen = 0;                 // bumps on every load/seek/stop, so stale async work drops out
 const blobs = new Map();     // key -> Promise<object URL>
+const times = new Map();     // key -> Promise<[[charStart, charEnd, t0, t1], ...] | null>
+let words = null;            // timings of the chunk playing now, once fetched
+let word = -1;               // index into words last reported
 
 function report(event, extra = {}) {
   chrome.runtime.sendMessage({ to: "bg", event, ...extra });
@@ -30,6 +34,17 @@ function fetchChunk(key) {
   return blobs.get(key);
 }
 
+// Word timings are optional: an engine or model without them leaves the sentence highlight
+// working exactly as before.
+function fetchTimes(key) {
+  if (!times.has(key)) {
+    times.set(key, fetch(`${SERVER}/chunk/${key}.words.json`, { headers: { "X-Sawt": "1" } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.words || null, () => null));
+  }
+  return times.get(key);
+}
+
 function forget(keep) {
   for (const [key, p] of blobs) {
     if (!keep.has(key)) {
@@ -37,7 +52,20 @@ function forget(keep) {
       blobs.delete(key);
     }
   }
+  for (const key of times.keys()) if (!keep.has(key)) times.delete(key);
 }
+
+// The word whose span holds the playhead; between two words, the one just finished, so the
+// highlight never blinks off in the gaps.
+setInterval(() => {
+  if (!words?.length || audio.paused) return;
+  const t = audio.currentTime;
+  let i = word >= 0 && words[word][2] <= t ? word : 0;
+  while (i + 1 < words.length && words[i + 1][2] <= t) i++;
+  if (words[i][2] > t || i === word) return;
+  word = i;
+  report("word", { index, start: words[i][0], end: words[i][1] });
+}, WORD_TICK);
 
 async function playAt(i) {
   const my = ++gen;
@@ -49,6 +77,9 @@ async function playAt(i) {
     return;
   }
   report("index", { index: i });
+  words = null;
+  word = -1;
+  fetchTimes(chunks[i].key).then((w) => { if (my === gen) words = w; });
   try {
     const url = await fetchChunk(chunks[i].key);
     if (my !== gen) return;

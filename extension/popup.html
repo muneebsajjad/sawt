@@ -1,6 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <link rel="stylesheet" href="popup.css">
+<script src="theme.js"></script>
 <body>
   <header>
     <div id="title">Sawt</div>
@@ -43,7 +44,34 @@
         <option value="1.5">1.5×</option>
       </select>
     </label>
+    <label class="wide">Explain hard words for
+      <select id="meanings">
+        <option value="off">No one (off)</option>
+        <option value="2.5" title="Only very rare words, like &quot;obsequious&quot;">An advanced reader</option>
+        <option value="3.0" title="Uncommon words too, like &quot;myopic&quot;">A confident reader</option>
+        <option value="3.5" title="Most words beyond everyday English, like &quot;ubiquitous&quot;">Someone still learning</option>
+      </select>
+    </label>
   </div>
+
+  <div id="theme-row" class="segmented" role="radiogroup" aria-label="Appearance">
+    <span>Appearance</span>
+    <div>
+      <label><input type="radio" name="theme" value="auto"><span>Auto</span></label>
+      <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+      <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
+    </div>
+  </div>
+
+  <label id="zoom-row" class="switch">
+    <span>Zoom the word being read</span>
+    <input type="checkbox" id="zoom" role="switch">
+  </label>
+
+  <details id="words" hidden>
+    <summary>Words on this page <span id="words-count" class="muted"></span></summary>
+    <ul id="words-list"></ul>
+  </details>
 
   <footer class="muted">Alt+R reads or pauses · right-click a selection to read just that</footer>
   <script src="popup.js"></script>

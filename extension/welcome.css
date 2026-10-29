@@ -11,8 +11,23 @@
   --warn: #b54708;
   color-scheme: light dark;
 }
+/* Dark when chosen in the popup, or when the system is dark and light was not chosen. */
+:root[data-theme="dark"] {
+  --bg: #15161b;
+  --fg: #ececf1;
+  --muted: #9a9ca8;
+  --line: #2a2c35;
+  --accent: #2dd4bf;
+  --soft: #10302d;
+  --btn: #22242c;
+  --code: #1d1f26;
+  --ok: #2dd4bf;
+  --warn: #fdb022;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #15161b;
     --fg: #ececf1;
     --muted: #9a9ca8;

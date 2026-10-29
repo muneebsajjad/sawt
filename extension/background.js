@@ -1,9 +1,14 @@
 // Owns the reading state. The offscreen document only plays what it is told; the popup only
 // renders chrome.storage.session.player and sends commands here.
 const SERVER = "http://127.0.0.1:7865";
-const DEFAULTS = { voice: "af_bella", speed: 0.85 };
+// meanings: the rarest a word may be and still be explained, on wordfreq's Zipf scale
+// ("myopic" 2.6, "ubiquitous" 3.4), or "off". The engine sends candidates up to 3.5.
+// zoom: magnify the word being spoken. Off by default; it is motion on someone else's page.
+const DEFAULTS = { voice: "bm_fable", speed: 1.1, meanings: "3.0", zoom: false };
 const NOT_RUNNING = "The voice engine is not running. Start it with: sawt serve";
-const HIGHLIGHT_CSS = "::highlight(sawt-reading) { background-color: #ffe58a; color: #1a1a1a; }";
+const HIGHLIGHT_CSS = "::highlight(sawt-reading) { background-color: #ffe58a; color: #1a1a1a; }"
+  + " ::highlight(sawt-word) { text-decoration: underline dotted 2px #0d9488;"
+  + " text-underline-offset: 3px; }";
 const POS = "pos:";            // chrome.storage.local key prefix: last sentence read, per page
 const POS_KEEP = 300;          // pages remembered; oldest are dropped
 
@@ -34,7 +39,30 @@ async function setState(patch) {
 }
 
 async function settings() {
-  return { ...DEFAULTS, ...(await chrome.storage.local.get(["voice", "speed"])) };
+  return { ...DEFAULTS,
+           ...(await chrome.storage.local.get(["voice", "speed", "meanings", "zoom"])) };
+}
+
+// The hard words worth explaining under the reader's setting, minus the ones they know.
+// Acronyms keep their case ("MAOP"), everything else is matched lowercase.
+async function wantedWords(words) {
+  if (!words?.length) return [];
+  const { meanings } = await settings();
+  if (meanings === "off") return [];
+  const { known = [] } = await chrome.storage.local.get("known");
+  const skip = new Set(known);
+  const limit = parseFloat(meanings);
+  return words.filter((w) => !skip.has(knownKey(w.word))
+    && (w.source === "page" || w.score <= limit));
+}
+
+function knownKey(word) {
+  return /^[A-Z][A-Z0-9]{1,7}s?$/.test(word) ? word : word.toLowerCase();
+}
+
+async function showSentence(s, sentence) {
+  const words = (await wantedWords(s.words)).filter((w) => w.sentence === sentence);
+  return toPage(s.tabId, { cmd: "show", sentence, words });
 }
 
 // Chrome closes an AUDIO_PLAYBACK offscreen document after ~30s of silence, so a long pause
@@ -151,16 +179,17 @@ async function readTab(tab, selectionText) {
 // speed change restarting from the current sentence).
 async function start({ text, title, source, tabId, url, index, saved }) {
   const { voice, speed } = await settings();
-  const { chunks, sentences } = await api("/read", { text, voice, speed, start: index });
+  const { chunks, sentences, words = [] } = await api("/read", { text, voice, speed,
+                                                                  start: index });
   const patch = {};
   if (saved) {
     index = resumeAt(chunks, sentences, saved);
     patch.resumedFrom = index > 0 ? index : null;
   }
-  await setState({ status: "playing", error: null, text, title, source, chunks, sentences,
-                   index, voice, speed, tabId, url, ...patch });
+  const s = await setState({ status: "playing", error: null, text, title, source, chunks,
+                             sentences, words, index, voice, speed, tabId, url, ...patch });
   toPage(tabId, { cmd: "prepare", sentences }).then(() =>
-    toPage(tabId, { cmd: "show", sentence: chunks[index]?.sentence }));
+    showSentence(s, chunks[index]?.sentence));
   await toPlayer({ cmd: "load", chunks, index, play: true });
 }
 
@@ -169,8 +198,8 @@ async function stop() {
   if (s.tabId) toPage(s.tabId, { cmd: "clear" });
   await toPlayer({ cmd: "stop" }).catch(() => {});
   await api("/stop", {}).catch(() => {});
-  await setState({ status: "idle", chunks: null, sentences: null, text: null, index: 0,
-                   error: null, resumedFrom: null });
+  await setState({ status: "idle", chunks: null, sentences: null, words: null, text: null,
+                   index: 0, error: null, resumedFrom: null });
 }
 
 async function command(msg) {
@@ -216,6 +245,28 @@ async function command(msg) {
         }
       }
       return;
+    case "zoom":
+      await chrome.storage.local.set({ zoom: msg.value });
+      if (!msg.value && s.tabId) toPage(s.tabId, { cmd: "word", sentence: -1 });
+      return;
+    case "meanings":
+      await chrome.storage.local.set({ meanings: msg.value });
+      if (s.chunks?.[s.index]) await showSentence(s, s.chunks[s.index].sentence);
+      return;
+    case "known": {
+      const { known = [] } = await chrome.storage.local.get("known");
+      const key = knownKey(msg.word);
+      if (!known.includes(key)) await chrome.storage.local.set({ known: [...known, key] });
+      return;
+    }
+    case "unknown": {
+      const { known = [] } = await chrome.storage.local.get("known");
+      const key = knownKey(msg.word);
+      await chrome.storage.local.set({ known: known.filter((k) => k !== key) });
+      return;
+    }
+    case "pageWords":
+      return wantedWords(s.words);
     case "voices":
       return api("/voices").then((d) => d.voices).catch(() => null);
     case "health":
@@ -239,8 +290,14 @@ async function playerEvent(msg) {
   if (msg.event === "index") {
     const s = await setState({ index: msg.index });
     const c = s.chunks?.[msg.index];
-    if (c) toPage(s.tabId, { cmd: "show", sentence: c.sentence });
+    if (c) showSentence(s, c.sentence);
     await savePosition(s, msg.index);
+  }
+  if (msg.event === "word") {
+    if (!(await settings()).zoom) return;
+    const s = await getState();
+    const c = s.chunks?.[msg.index];
+    if (c) toPage(s.tabId, { cmd: "word", sentence: c.sentence, start: msg.start, end: msg.end });
   }
   if (msg.event === "ended") {
     const s = await getState();
