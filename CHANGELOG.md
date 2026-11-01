@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **`sawt agent install` could fail on macOS when restarting the engine** (`launchctl bootstrap`
+  status 5): launchd had not finished stopping the old engine yet. It now waits and retries.
+
 ## 0.2.1 (engine and extension)
 
 ### Fixed

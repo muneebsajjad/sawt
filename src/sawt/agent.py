@@ -10,6 +10,7 @@ import pathlib
 import shutil
 import subprocess
 import sys
+import time
 from xml.sax.saxutils import escape
 
 from . import models, paths
@@ -54,13 +55,26 @@ def plist_text():
 """
 
 
+def _bootstrap(domain, tries=20, wait=0.5):
+    """Load the plist. bootout returns before the old engine has stopped, and bootstrap fails
+    (status 5) while it is still loaded, so retry until launchd has let go of it."""
+    for i in range(tries):
+        r = subprocess.run(["launchctl", "bootstrap", domain, str(PLIST)],
+                           capture_output=True, text=True)
+        if r.returncode == 0:
+            return
+        if i < tries - 1:
+            time.sleep(wait)
+    raise SystemExit(f"launchctl bootstrap failed ({r.returncode}): {r.stderr.strip()}")
+
+
 def _launchd(action):
     domain = f"gui/{os.getuid()}"
     if action == "install":
         PLIST.parent.mkdir(parents=True, exist_ok=True)
         PLIST.write_text(plist_text())
         subprocess.run(["launchctl", "bootout", f"{domain}/{LABEL}"], capture_output=True)
-        subprocess.run(["launchctl", "bootstrap", domain, str(PLIST)], check=True)
+        _bootstrap(domain)
         return f"installed {PLIST}"
     if action == "uninstall":
         subprocess.run(["launchctl", "bootout", f"{domain}/{LABEL}"], capture_output=True)

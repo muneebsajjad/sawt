@@ -27,3 +27,20 @@ def test_windows_task_runs_hidden_at_logon_and_restarts():
     assert root.find("t:Actions/t:Exec/t:Arguments", NS).text == "-m sawt serve"
     assert root.find("t:Settings/t:ExecutionTimeLimit", NS).text == "PT0S"   # no time limit
     assert root.find("t:Settings/t:RestartOnFailure/t:Count", NS) is not None
+
+
+def test_launchd_bootstrap_retries_while_the_old_engine_unloads(monkeypatch):
+    calls = []
+
+    class R:
+        def __init__(self, code):
+            self.returncode, self.stderr = code, "Bootstrap failed: 5: Input/output error"
+
+    def run(cmd, **kw):
+        calls.append(cmd)
+        return R(5 if len(calls) < 3 else 0)                 # still unloading twice, then ok
+
+    monkeypatch.setattr(agent.subprocess, "run", run)
+    monkeypatch.setattr(agent.time, "sleep", lambda s: None)
+    agent._bootstrap("gui/1")
+    assert len(calls) == 3 and calls[-1][1] == "bootstrap"
