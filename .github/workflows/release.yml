@@ -1,0 +1,79 @@
+name: Release
+
+# Push a tag like v0.2.1 to release that version:
+#   git tag v0.2.1 && git push origin v0.2.1
+# The tag must match the version in src/sawt/__init__.py and extension/manifest.json, and
+# CHANGELOG.md must have a "## 0.2.1" section (it becomes the release notes).
+# PyPI upload uses trusted publishing: no token is stored anywhere.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Check versions match the tag
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          engine=$(sed -nE 's/^__version__ = "(.*)"/\1/p' src/sawt/__init__.py)
+          ext=$(node -p "require('./extension/manifest.json').version")
+          echo "tag=$tag engine=$engine extension=$ext"
+          [ "$tag" = "$engine" ] && [ "$tag" = "$ext" ] || { echo "::error::Versions do not match the tag"; exit 1; }
+          grep -q "^## $tag " CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## $tag' section"; exit 1; }
+      - run: uv sync
+      - run: uv run pytest -q
+      - run: uv build
+      - name: Pack the extension
+        run: uv run python scripts/pack_extension.py
+      - name: Release notes from the changelog
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          awk -v v="## $tag " 'index($0, v) == 1 {on = 1; next} on && /^## / {exit} on' CHANGELOG.md > notes.md
+          cat notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            dist/
+            notes.md
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/sawt/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+      - name: Keep only the Python packages
+        run: rm -f dist/extension-*.zip
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Sawt ${GITHUB_REF_NAME#v}" \
+            --notes-file notes.md
