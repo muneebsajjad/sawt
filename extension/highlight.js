@@ -318,6 +318,20 @@
     }
   }, true);
 
+  // The box of the text block a sentence sits in: its nearest block-level ancestor, whatever the
+  // tag. Pages without <p> (paulgraham.com keeps essays in a table cell) otherwise measured the
+  // sentence alone, and a short sentence put the cards over the rest of its paragraph.
+  function columnOf(range) {
+    let el = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+    while (el && el !== document.body && el !== document.documentElement) {
+      if (!getComputedStyle(el).display.startsWith("inline") && getComputedStyle(el).display !== "contents") {
+        return el.getBoundingClientRect();
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
   // Beside the article column when there is room. Otherwise above the sentence, over text
   // already read; below it only when the sentence is too near the top of the window.
   function renderCards(words, sentenceRange) {
@@ -328,8 +342,7 @@
     root.append(stack);
 
     const rect = sentenceRange.getBoundingClientRect();
-    const column = sentenceRange.startContainer.parentElement?.closest("p, li, blockquote, div")
-      ?.getBoundingClientRect() || rect;
+    const column = columnOf(sentenceRange) || rect;
     const width = Math.min(300, innerWidth - 32);
     let left = column.right + 24;
     let top = rect.top;

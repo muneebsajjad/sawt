@@ -37,6 +37,9 @@ SENTENCE_RE = re.compile(r'(?<=[.!?:;]) +')
 NO_BREAK_RE = re.compile(r'\b(?:Mr|Mrs|Ms|Dr|Prof|St|Mt|Jr|Sr|vs|cf|ca|vol|pp|p|ch|fig|No|approx'
                          r'|i\.e|e\.g|a\.m|p\.m|[A-Z])\.$')
 KEY_RE = re.compile(r'^[0-9a-f]{24}$')
+SPEAKABLE_RE = re.compile(r'[^\W_]')   # a letter or digit, in any script: something to say
+SILENCE_SR = 24000                     # Kokoro's sample rate
+SILENCE_SECONDS = 0.25                 # stands in for a chunk that cannot be spoken
 # Extensions allowed to drive the server. Any extension the user installs can reach 127.0.0.1,
 # so the published one is pinned here; SAWT_EXTENSION_IDS adds a local unpacked copy.
 PUBLISHED_EXTENSION_IDS = {"onfpjncnceogmahnimecmbofiplglnge"}   # Chrome Web Store
@@ -87,7 +90,9 @@ class Engine:
         self.session = None
         self.next_sid = 1
         self.cond = threading.Condition()
-        threading.Thread(target=self._worker, daemon=True).start()
+        self.failed = set()           # keys that could not even be stored: skipped, not retried
+        self.worker = threading.Thread(target=self._worker, daemon=True)
+        self.worker.start()
 
     def path(self, key):
         return self.cache / f"{key}.wav"
@@ -157,9 +162,42 @@ class Engine:
         if s is None:
             return None
         for i in range(s.cursor, min(s.cursor + LOOKAHEAD + 1, len(s.pieces))):
-            if not self.ready(s.pieces[i]["key"]):
+            key = s.pieces[i]["key"]
+            if key not in self.failed and not self.ready(key):
                 return s, s.pieces[i]
         return None
+
+    def _speak(self, text, voice, speed):
+        """Audio, sample rate and spoken word times for one chunk. A chunk with nothing to say
+        ("[", "—"), or one the model rejects, becomes a short silence: one bad chunk must never
+        stop the article, let alone the engine."""
+        silence = np.zeros(int(SILENCE_SR * SILENCE_SECONDS), dtype="float32"), SILENCE_SR, []
+        if not SPEAKABLE_RE.search(text):
+            return silence
+        try:
+            if self.timed:
+                audio, sr, timings = self.kokoro.create_timed(text, voice=voice, speed=speed,
+                                                              lang="en-us")
+                return audio, sr, wordtime.spoken_words(timings)
+            audio, sr = self.kokoro.create(text, voice=voice, speed=speed, lang="en-us")
+            return audio, sr, []
+        except Exception as e:                      # the model's own errors, e.g. no phonemes
+            print(f"could not synthesize {text[:60]!r} ({e}); playing silence instead",
+                  file=sys.stderr, flush=True)
+            return silence
+
+    def _store(self, key, audio, sr, words):
+        cached = self.path(key)
+        # same .part + rename as synth.py: a kill mid-write must not leave a wav we trust
+        tmp = cached.with_suffix(".part")
+        tmp.parent.mkdir(parents=True, exist_ok=True)   # the cache may be deleted under us
+        sf.write(tmp, np.asarray(audio, dtype="float32"), sr, format="WAV")
+        if self.timed:
+            # timings first: a wav on disk is what readers wait for
+            tt = self.timing_path(key).with_suffix(".part")
+            tt.write_text(json.dumps({"words": [[round(a, 3), round(b, 3)] for a, b in words]}))
+            tt.replace(self.timing_path(key))
+        tmp.replace(cached)
 
     def _worker(self):
         while True:
@@ -169,25 +207,12 @@ class Engine:
                     self.cond.wait()
                     job = self._next_job()
             s, piece = job
-            if self.timed:
-                audio, sr, timings = self.kokoro.create_timed(piece["text"], voice=s.voice,
-                                                              speed=s.speed, lang="en-us")
-                words = wordtime.spoken_words(timings)
-            else:
-                audio, sr = self.kokoro.create(piece["text"], voice=s.voice, speed=s.speed,
-                                               lang="en-us")
-            cached = self.path(piece["key"])
-            # same .part + rename as synth.py: a kill mid-write must not leave a wav we trust
-            tmp = cached.with_suffix(".part")
-            tmp.parent.mkdir(parents=True, exist_ok=True)   # the cache may be deleted under us
-            sf.write(tmp, np.asarray(audio, dtype="float32"), sr, format="WAV")
-            if self.timed:
-                # timings first: a wav on disk is what readers wait for
-                tt = self.timing_path(piece["key"]).with_suffix(".part")
-                tt.write_text(json.dumps({"words": [[round(a, 3), round(b, 3)]
-                                                    for a, b in words]}))
-                tt.replace(self.timing_path(piece["key"]))
-            tmp.replace(cached)
+            try:
+                self._store(piece["key"], *self._speak(piece["text"], s.voice, s.speed))
+            except Exception as e:                  # e.g. the disk: skip it, keep serving
+                print(f"could not store chunk {piece['key']} ({e}); skipping it",
+                      file=sys.stderr, flush=True)
+                self.failed.add(piece["key"])
             with self.cond:
                 self.cond.notify_all()
 
@@ -202,6 +227,8 @@ class Engine:
             elif not self.ready(key):
                 return None                          # not part of the live article
             while not self.ready(key):
+                if key in self.failed:
+                    return None
                 left = deadline - time.time()
                 if left <= 0 or self.session is not s:
                     return None
@@ -246,7 +273,12 @@ class Handler(BaseHTTPRequestHandler):
         if not self._allowed():
             return self._send(403, {"error": "forbidden"})
         if self.path == "/health":
-            return self._send(200, {"ok": True, "version": __version__})
+            # "ok" also means audio is being made: a dead worker answers health but speaks nothing
+            alive = self.engine.worker.is_alive()
+            body = {"ok": alive, "version": __version__, "worker": "running" if alive else "stopped"}
+            if not alive:
+                body["error"] = "The voice engine stopped making audio. Restart it: sawt agent install"
+            return self._send(200 if alive else 503, body)
         if self.path == "/voices":
             return self._send(200, {"voices": self.engine.voices})
         m = re.match(r'^/chunk/([0-9a-f]+)\.words\.json$', self.path)

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.1 (engine and extension)
+
+### Fixed
+- **Reading could go silent for good.** A chunk the voice model cannot say (a lone "[" from a
+  footnote marker, say) raised inside the engine's synthesis thread and stopped all audio, while
+  the engine still answered as healthy; only a restart helped. Such chunks now play as a short
+  silence and reading carries on, and the engine can no longer lose its synthesis thread to one bad
+  chunk.
+- **`/health` tells the truth**: it reports whether audio is being made, and says how to restart
+  the engine if not.
+- **Meaning cards covered the text** on pages that do not use `<p>` (paulgraham.com, older sites):
+  they were placed beside the sentence instead of beside the column.
+
+### Upgrading
+- `uv tool upgrade sawt`, then `sawt agent install` to restart it. The extension updates itself.
+
 ## 0.2.0 (engine and extension)
 
 ### New
