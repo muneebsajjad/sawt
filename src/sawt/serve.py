@@ -21,12 +21,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 import soundfile as sf
 
-from . import __version__, glossary, models, paths, wordtime
+from . import __version__, glossary, models, paths, pdftext, wordtime
 from .synth import apply_dict, chunk, chunk_key, load_dict
 from .textnorm import normalize
 
 PORT = 7865
 LOOKAHEAD = 6            # chunks synthesized ahead of the player's position
+MAX_PDF = 64 * 1024 * 1024   # bytes
 MAX_TEXT = 200_000       # chars; a whole book belongs in the book pipeline, not here
 WAIT_SECONDS = 90        # how long a /chunk request blocks on synthesis before giving up
 # One sentence per chunk, unlike a book's 420-char groups: the first chunk is the wait before
@@ -265,6 +266,19 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _pdf(self):
+        """PDF bytes in, readable text out: {"title", "text", "pages", "truncated"}."""
+        from urllib.parse import parse_qs, urlsplit
+        n = int(self.headers.get("Content-Length", 0))
+        if n > MAX_PDF:
+            return self._send(413, {"error": "This PDF is over 64MB, too large to read here."})
+        data = self.rfile.read(n)
+        name = parse_qs(urlsplit(self.path).query).get("name", [""])[0]
+        try:
+            return self._send(200, pdftext.read(data, name, MAX_TEXT))
+        except pdftext.NoText as e:
+            return self._send(422, {"error": str(e)})
+
     def do_OPTIONS(self):
         self.send_response(403)
         self.end_headers()
@@ -298,6 +312,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._allowed():
             return self._send(403, {"error": "forbidden"})
+        if self.path.split("?")[0] == "/pdf":
+            return self._pdf()
         try:
             n = int(self.headers.get("Content-Length", 0))
             if n > MAX_TEXT * 4:

@@ -1,0 +1,38 @@
+/* The reading copy of a PDF: text Sawt can highlight, explain and resume, unlike the PDF viewer. */
+:root {
+  --bg: #ffffff; --fg: #1d1f24; --muted: #6b7280; --line: #e5e7eb; --accent: #0d9488;
+  --code: #f5f6f8;
+  color-scheme: light dark;
+}
+:root[data-theme="dark"] {
+  --bg: #15161b; --fg: #e6e6ea; --muted: #9a9ca8; --line: #2a2c35; --accent: #2dd4bf;
+  --code: #1d1f26;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15161b; --fg: #e6e6ea; --muted: #9a9ca8; --line: #2a2c35; --accent: #2dd4bf;
+    --code: #1d1f26;
+  }
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--fg);
+       font: 18px/1.65 Charter, "Iowan Old Style", Georgia, serif; -webkit-font-smoothing: antialiased; }
+/* the column sits left of centre so meaning cards fit beside it */
+main { max-width: 1020px; margin: 0 auto; padding: 56px 340px 96px 16px; }
+@media (max-width: 1060px) { main { max-width: 700px; padding-right: 16px; } }
+.kicker { font: 600 11px/1 -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: 1.4px;
+          text-transform: uppercase; color: var(--accent); margin: 0 0 18px; }
+h1 { font-size: 34px; line-height: 1.15; letter-spacing: -0.01em; margin: 0 0 14px; }
+.meta { font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: var(--muted); margin: 0 0 28px; }
+.meta a { color: inherit; }
+.note { font: 14px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; color: var(--muted);
+        border-left: 3px solid var(--line); padding: 2px 0 2px 12px; margin: 0 0 28px; }
+code, kbd { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code);
+            padding: 1px 5px; border-radius: 5px; }
+article p { margin: 0 0 1.1em; }
+article h2 { font-size: 21px; line-height: 1.3; margin: 1.6em 0 0.6em; }
+::highlight(sawt-reading) { background-color: #ffe58a; color: #1a1a1a; }
+::highlight(sawt-word) { text-decoration: underline dotted 2px #0d9488; text-underline-offset: 3px; }

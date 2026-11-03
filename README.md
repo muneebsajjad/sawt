@@ -15,6 +15,9 @@ ever sent to a server: the voice model ([Kokoro](https://huggingface.co/hexgrad/
 
 - **Read any article aloud** from the browser: one click or `Alt+R`. Menus, ads and sidebars
   are skipped, the sentence being spoken is highlighted, and every page resumes where you left off.
+- **Read PDFs too.** Open a PDF in Chrome and press `Alt+R`: Sawt opens a clean reading copy
+  beside it (headings and paragraphs, without page numbers, running headers, citation markers
+  or the reference list) and reads that, with highlighting, meanings and resume.
 - **Meanings of hard words as you listen.** When a sentence holds a word like "myopic", a small
   card beside the article explains it, from an offline dictionary or from the article itself
   ("maximum allowable operating pressure (MAOP)"). Reading never pauses.
@@ -23,7 +26,7 @@ ever sent to a server: the voice model ([Kokoro](https://huggingface.co/hexgrad/
   audiobook loudness standards.
 - **28 English voices**, American and British, with adjustable speed.
 
-> **Status: v0.2, early.** It works well for the author daily; expect rough edges.
+> **Status: v0.3, early.** It works well for the author daily; expect rough edges.
 > Bug reports and contributions are very welcome. See [CONTRIBUTING.md](https://github.com/muneebsajjad/sawt/blob/main/CONTRIBUTING.md).
 
 ## How it works

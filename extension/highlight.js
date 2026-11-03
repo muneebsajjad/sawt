@@ -408,6 +408,9 @@
 
   chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     if (msg.to !== "page") return;
+    // On a web page this runs as a content script, reached by tabs.sendMessage. On Sawt's own
+    // reader page it is an extension page, reached by runtime messages naming its tab.
+    if ((window.__sawtTab ?? null) !== (msg.tabId ?? null)) return;
     if (msg.cmd === "prepare") reply({ found: prepare(msg.sentences), total: msg.sentences.length });
     if (msg.cmd === "show") show(msg.sentence, msg.words);
     if (msg.cmd === "word") zoom(msg.sentence, msg.start, msg.end);

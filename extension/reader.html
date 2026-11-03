@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sawt reader</title>
+<link rel="stylesheet" href="reader.css">
+<script src="theme.js"></script>
+<body>
+<main>
+  <header>
+    <p class="kicker" id="kicker">PDF</p>
+    <h1 id="title"></h1>
+    <p class="meta"><span id="meta"></span> · <a id="original" target="_blank" rel="noopener">Open the original</a></p>
+    <p class="note" id="truncated" hidden>This PDF is long, so Sawt reads the first part, shown below. To listen to a whole
+      book, convert it with <code>sawt extract</code>.</p>
+    <p class="note" id="missing" hidden>This reading copy is no longer available. Open the PDF again and press
+      <kbd>Alt</kbd>+<kbd>R</kbd>.</p>
+  </header>
+  <article id="text"></article>
+</main>
+<script src="highlight.js"></script>
+<script src="reader.js"></script>

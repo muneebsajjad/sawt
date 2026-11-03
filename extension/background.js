@@ -100,7 +100,96 @@ async function extract(tabId) {
 }
 
 function toPage(tabId, msg) {
+  if (readerTabIds.has(tabId)) {
+    return chrome.runtime.sendMessage({ to: "page", tabId, ...msg }).catch(() => {});
+  }
   return chrome.tabs.sendMessage(tabId, { to: "page", ...msg }).catch(() => {});
+}
+
+// ---- PDFs -----------------------------------------------------------------------------------
+// Chrome's PDF viewer cannot be read from or drawn on, so the engine turns the PDF into text and
+// Sawt opens it as a reading copy (reader.html) beside the PDF, where highlighting, meanings,
+// zoom and resume all work as on any article.
+const READER = chrome.runtime.getURL("reader.html");
+const readerTabIds = new Set();      // tabs showing reader.html; refilled from their URLs below
+chrome.tabs.query({ url: READER + "*" }).then((tabs) => tabs.forEach((t) => readerTabIds.add(t.id)));
+
+async function isPdf(tab) {
+  if (/^[a-z]+:\/\/[^?#]*\.pdf([?#]|$)/i.test(tab.url || "")) return true;
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: tab.id },
+                                                                func: () => document.contentType });
+    return result === "application/pdf";
+  } catch {
+    return false;
+  }
+}
+
+async function readPdf(tab) {
+  await setState({ status: "loading", error: null, title: tab.title, tabId: tab.id,
+                   chunks: null, index: 0, resumedFrom: null });
+  try {
+    if (tab.url.startsWith("file:") && !(await chrome.extension.isAllowedFileSchemeAccess())) {
+      throw new Error("To read PDFs saved on your computer, open chrome://extensions, click "
+        + "Details under Sawt and turn on \"Allow access to file URLs\".");
+    }
+    // an engine older than 0.3 has no /pdf, and would misread the upload as a bad request
+    const [major, minor] = ((await api("/health")).version || "0.0").split(".").map(Number);
+    if (major === 0 && minor < 3) {
+      throw new Error("Reading PDFs needs engine 0.3 or newer. Update it: uv tool upgrade sawt, "
+        + "then sawt agent install");
+    }
+    let bytes;
+    try {
+      const res = await fetch(tab.url, { credentials: "include" });
+      if (!res.ok) throw new Error(`the site answered ${res.status}`);
+      bytes = await res.arrayBuffer();
+    } catch (e) {
+      throw new Error(`Could not download this PDF (${e.message}).`);
+    }
+    const name = decodeURIComponent(new URL(tab.url).pathname.split("/").pop() || "");
+    let res;
+    try {
+      res = await fetch(`${SERVER}/pdf?name=${encodeURIComponent(name)}`, {
+        method: "POST", headers: { "X-Sawt": "1", "Content-Type": "application/pdf" }, body: bytes });
+    } catch {
+      throw new Error(NOT_RUNNING);
+    }
+    const doc = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(doc.error || `the engine answered ${res.status}`);
+    const id = crypto.randomUUID();
+    await pruneDocs();
+    await chrome.storage.session.set({ ["doc:" + id]: { ...doc, url: tab.url, at: Date.now() } });
+    const reader = await chrome.tabs.create({ url: `${READER}#${id}`, index: tab.index + 1,
+                                              openerTabId: tab.id });
+    readerTabIds.add(reader.id);
+    await setState({ tabId: reader.id });            // reader.js asks for readDoc once shown
+  } catch (e) {
+    await setState({ status: "error", error: e.message });
+  }
+}
+
+// Reading copies live in session storage (10MB, cleared when Chrome quits): keep the newest few.
+async function pruneDocs(keep = 8) {
+  const all = await chrome.storage.session.get(null);
+  const old = Object.entries(all).filter(([k]) => k.startsWith("doc:"))
+    .sort((a, b) => b[1].at - a[1].at).slice(keep - 1).map(([k]) => k);
+  if (old.length) await chrome.storage.session.remove(old);
+}
+
+async function readDoc(id, tabId) {
+  readerTabIds.add(tabId);
+  const doc = (await chrome.storage.session.get("doc:" + id))["doc:" + id];
+  if (!doc) return;
+  const url = pageKey(doc.url);
+  const saved = (await chrome.storage.local.get(POS + url))[POS + url];
+  try {
+    await start({ text: `${doc.title}\n\n${doc.text}`, title: doc.title, source: "pdf", tabId,
+                  url, index: saved?.index || 0, saved });
+    prunePositions();
+  } catch (e) {
+    await setState({ status: "error", error: e.message });
+  }
 }
 
 async function injectHighlighter(tabId) {
@@ -150,6 +239,10 @@ async function prunePositions() {
 }
 
 async function readTab(tab, selectionText) {
+  if (!selectionText && tab.url?.startsWith(READER)) {
+    return readDoc(new URL(tab.url).hash.slice(1), tab.id);
+  }
+  if (!selectionText && (await isPdf(tab))) return readPdf(tab);
   await setState({ status: "loading", error: null, title: tab.title, tabId: tab.id,
                    chunks: null, index: 0, resumedFrom: null });
   try {
@@ -265,6 +358,8 @@ async function command(msg) {
       await chrome.storage.local.set({ known: known.filter((k) => k !== key) });
       return;
     }
+    case "readDoc":
+      return readDoc(msg.id, msg.tabId);
     case "pageWords":
       return wantedWords(s.words);
     case "voices":
@@ -330,5 +425,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
+  readerTabIds.delete(tabId);
   if ((await getState()).tabId === tabId) stop();
 });

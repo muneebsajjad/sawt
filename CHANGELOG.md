@@ -1,10 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (engine and extension)
+
+### New
+- **Read PDFs.** Press `Alt+R` (or **Read this page** in the popup) on a PDF open in Chrome.
+  The engine turns it into readable text and Sawt opens a reading copy in the next tab: the
+  PDF's headings and paragraphs, without page numbers, running headers, footnote symbols,
+  numeric citations like "[13]", tables, code or the reference list. Highlighting, meanings,
+  word zoom and resume work there as on any article. Research papers start at the abstract.
+- PDFs saved on your computer work once **Allow access to file URLs** is on for Sawt in
+  `chrome://extensions`; Sawt says so when it is needed.
+- Very long PDFs are read up to the article limit (about 200,000 characters); the reading copy
+  says so. Whole books still belong in `sawt extract`.
 
 ### Fixed
 - **`sawt agent install` could fail on macOS when restarting the engine** (`launchctl bootstrap`
   status 5): launchd had not finished stopping the old engine yet. It now waits and retries.
+
+### Upgrading
+- `uv tool upgrade sawt`, then `sawt agent install`. The extension updates itself; with an
+  older engine it reads web pages as before and asks for the update when given a PDF.
 
 ## 0.2.1 (engine and extension)
 
