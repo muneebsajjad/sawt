@@ -31,6 +31,12 @@
         "default": "Alt+R"
       },
       "description": "Read this page, or pause / resume"
+    },
+    "add-to-queue": {
+      "suggested_key": {
+        "default": "Alt+Q"
+      },
+      "description": "Add this page to the queue"
     }
   },
   "icons": {

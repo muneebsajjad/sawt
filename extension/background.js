@@ -92,8 +92,11 @@ async function toPlayer(msg) {
   return chrome.runtime.sendMessage({ to: "offscreen", ...msg });
 }
 
-async function extract(tabId) {
+// whole: the article even when text is selected (queueing a page, not a fragment of it)
+async function extract(tabId, whole = false) {
   await chrome.scripting.executeScript({ target: { tabId }, files: ["vendor/Readability.js"] });
+  await chrome.scripting.executeScript({ target: { tabId }, args: [whole],
+                                         func: (w) => { window.__sawtWhole = w; } });
   const [{ result }] = await chrome.scripting.executeScript({ target: { tabId },
                                                               files: ["content.js"] });
   return result;
@@ -125,48 +128,59 @@ async function isPdf(tab) {
   }
 }
 
+// The PDF in this tab as {title, text, pages, truncated}, made by the engine.
+async function pdfDoc(tab) {
+  if (tab.url.startsWith("file:") && !(await chrome.extension.isAllowedFileSchemeAccess())) {
+    throw new Error("To read PDFs saved on your computer, open chrome://extensions, click "
+      + "Details under Sawt and turn on \"Allow access to file URLs\".");
+  }
+  // an engine older than 0.3 has no /pdf, and would misread the upload as a bad request
+  const [major, minor] = ((await api("/health")).version || "0.0").split(".").map(Number);
+  if (major === 0 && minor < 3) {
+    throw new Error("Reading PDFs needs engine 0.3 or newer. Update it: uv tool upgrade sawt, "
+      + "then sawt agent install");
+  }
+  let bytes;
+  try {
+    const res = await fetch(tab.url, { credentials: "include" });
+    if (!res.ok) throw new Error(`the site answered ${res.status}`);
+    bytes = await res.arrayBuffer();
+  } catch (e) {
+    throw new Error(`Could not download this PDF (${e.message}).`);
+  }
+  const name = decodeURIComponent(new URL(tab.url).pathname.split("/").pop() || "");
+  let res;
+  try {
+    res = await fetch(`${SERVER}/pdf?name=${encodeURIComponent(name)}`, {
+      method: "POST", headers: { "X-Sawt": "1", "Content-Type": "application/pdf" }, body: bytes });
+  } catch {
+    throw new Error(NOT_RUNNING);
+  }
+  const doc = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(doc.error || `the engine answered ${res.status}`);
+  return doc;
+}
+
 async function readPdf(tab) {
   await setState({ status: "loading", error: null, title: tab.title, tabId: tab.id,
-                   chunks: null, index: 0, resumedFrom: null });
+                   chunks: null, index: 0, resumedFrom: null, queueId: null });
   try {
-    if (tab.url.startsWith("file:") && !(await chrome.extension.isAllowedFileSchemeAccess())) {
-      throw new Error("To read PDFs saved on your computer, open chrome://extensions, click "
-        + "Details under Sawt and turn on \"Allow access to file URLs\".");
-    }
-    // an engine older than 0.3 has no /pdf, and would misread the upload as a bad request
-    const [major, minor] = ((await api("/health")).version || "0.0").split(".").map(Number);
-    if (major === 0 && minor < 3) {
-      throw new Error("Reading PDFs needs engine 0.3 or newer. Update it: uv tool upgrade sawt, "
-        + "then sawt agent install");
-    }
-    let bytes;
-    try {
-      const res = await fetch(tab.url, { credentials: "include" });
-      if (!res.ok) throw new Error(`the site answered ${res.status}`);
-      bytes = await res.arrayBuffer();
-    } catch (e) {
-      throw new Error(`Could not download this PDF (${e.message}).`);
-    }
-    const name = decodeURIComponent(new URL(tab.url).pathname.split("/").pop() || "");
-    let res;
-    try {
-      res = await fetch(`${SERVER}/pdf?name=${encodeURIComponent(name)}`, {
-        method: "POST", headers: { "X-Sawt": "1", "Content-Type": "application/pdf" }, body: bytes });
-    } catch {
-      throw new Error(NOT_RUNNING);
-    }
-    const doc = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(doc.error || `the engine answered ${res.status}`);
-    const id = crypto.randomUUID();
-    await pruneDocs();
-    await chrome.storage.session.set({ ["doc:" + id]: { ...doc, url: tab.url, at: Date.now() } });
-    const reader = await chrome.tabs.create({ url: `${READER}#${id}`, index: tab.index + 1,
-                                              openerTabId: tab.id });
-    readerTabIds.add(reader.id);
-    await setState({ tabId: reader.id });            // reader.js asks for readDoc once shown
+    const doc = await pdfDoc(tab);
+    await openCopy({ ...doc, url: tab.url, source: "pdf" }, { index: tab.index + 1,
+                                                             openerTabId: tab.id });
   } catch (e) {
     await setState({ status: "error", error: e.message });
   }
+}
+
+// Show a reading copy in a reader tab; reader.js asks for readDoc once it is shown.
+async function openCopy(doc, where) {
+  const id = crypto.randomUUID();
+  await pruneDocs();
+  await chrome.storage.session.set({ ["doc:" + id]: { ...doc, at: Date.now() } });
+  const reader = await chrome.tabs.create({ url: `${READER}#${id}`, ...where });
+  readerTabIds.add(reader.id);
+  await setState({ tabId: reader.id });
 }
 
 // Reading copies live in session storage (10MB, cleared when Chrome quits): keep the newest few.
@@ -184,8 +198,9 @@ async function readDoc(id, tabId) {
   const url = pageKey(doc.url);
   const saved = (await chrome.storage.local.get(POS + url))[POS + url];
   try {
-    await start({ text: `${doc.title}\n\n${doc.text}`, title: doc.title, source: "pdf", tabId,
-                  url, index: saved?.index || 0, saved });
+    await start({ text: `${doc.title}\n\n${doc.text}`, title: doc.title,
+                  source: doc.source || "pdf", tabId, url, index: saved?.index || 0, saved,
+                  queueId: doc.queueId });
     prunePositions();
   } catch (e) {
     await setState({ status: "error", error: e.message });
@@ -238,13 +253,13 @@ async function prunePositions() {
   if (old.length) await chrome.storage.local.remove(old);
 }
 
-async function readTab(tab, selectionText) {
+async function readTab(tab, selectionText, queueId = null) {
   if (!selectionText && tab.url?.startsWith(READER)) {
     return readDoc(new URL(tab.url).hash.slice(1), tab.id);
   }
   if (!selectionText && (await isPdf(tab))) return readPdf(tab);
   await setState({ status: "loading", error: null, title: tab.title, tabId: tab.id,
-                   chunks: null, index: 0, resumedFrom: null });
+                   chunks: null, index: 0, resumedFrom: null, queueId });
   try {
     let page;
     if (selectionText) {
@@ -261,7 +276,7 @@ async function readTab(tab, selectionText) {
     const saved = url ? (await chrome.storage.local.get(POS + url))[POS + url] : null;
     const text = page.title ? `${page.title}\n\n${page.text}` : page.text;
     await start({ text, title: page.title || tab.title, source: page.source, tabId: tab.id,
-                  url, index: saved?.index || 0, saved });
+                  url, index: saved?.index || 0, saved, queueId });
     prunePositions();
   } catch (e) {
     await setState({ status: "error", error: e.message });
@@ -270,7 +285,8 @@ async function readTab(tab, selectionText) {
 
 // `saved` is a remembered position to validate; without it `index` is trusted as-is (a voice or
 // speed change restarting from the current sentence).
-async function start({ text, title, source, tabId, url, index, saved }) {
+// queueId: the queue item being read, so that its end moves on to the next one.
+async function start({ text, title, source, tabId, url, index, saved, queueId = null }) {
   const { voice, speed } = await settings();
   const { chunks, sentences, words = [] } = await api("/read", { text, voice, speed,
                                                                   start: index });
@@ -280,7 +296,8 @@ async function start({ text, title, source, tabId, url, index, saved }) {
     patch.resumedFrom = index > 0 ? index : null;
   }
   const s = await setState({ status: "playing", error: null, text, title, source, chunks,
-                             sentences, words, index, voice, speed, tabId, url, ...patch });
+                             sentences, words, index, voice, speed, tabId, url, queueId,
+                             ...patch });
   toPage(tabId, { cmd: "prepare", sentences }).then(() =>
     showSentence(s, chunks[index]?.sentence));
   await toPlayer({ cmd: "load", chunks, index, play: true });
@@ -292,7 +309,7 @@ async function stop() {
   await toPlayer({ cmd: "stop" }).catch(() => {});
   await api("/stop", {}).catch(() => {});
   await setState({ status: "idle", chunks: null, sentences: null, words: null, text: null,
-                   index: 0, error: null, resumedFrom: null });
+                   index: 0, error: null, resumedFrom: null, queueId: null });
 }
 
 async function command(msg) {
@@ -332,7 +349,7 @@ async function command(msg) {
       if (s.text && (s.status === "playing" || s.status === "paused")) {
         try {
           await start({ text: s.text, title: s.title, source: s.source, tabId: s.tabId,
-                        url: s.url, index: s.index });
+                        url: s.url, index: s.index, queueId: s.queueId });
         } catch (e) {
           await setState({ status: "error", error: e.message });
         }
@@ -360,6 +377,24 @@ async function command(msg) {
     }
     case "readDoc":
       return readDoc(msg.id, msg.tabId);
+    case "enqueue": {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      return enqueue(tab);
+    }
+    case "dequeue":
+      await setQueue((await getQueue()).filter((i) => i.id !== msg.id));
+      return;
+    case "playQueue": {
+      const q = await getQueue();
+      const item = q.find((i) => i.id === msg.id) || q[0];
+      return item && playItem(item);
+    }
+    case "skip": {                     // done with this article: on to the next one
+      const q = (await getQueue()).filter((i) => i.id !== s.queueId);
+      await setQueue(q);
+      if (q.length) return playItem(q[0]);
+      return stop();
+    }
     case "pageWords":
       return wantedWords(s.words);
     case "voices":
@@ -398,7 +433,13 @@ async function playerEvent(msg) {
     const s = await getState();
     if (s.url) await chrome.storage.local.remove(POS + s.url);   // finished: start fresh next time
     if (s.tabId) toPage(s.tabId, { cmd: "clear" });
-    await setState({ status: "idle", index: 0, resumedFrom: null });
+    // a finished article leaves the queue however it was started; one started from the queue
+    // goes on to the next
+    const q = await getQueue();
+    const left = q.filter((i) => i.id !== s.queueId && pageKey(i.url) !== s.url);
+    if (left.length !== q.length) await setQueue(left);
+    if (s.queueId && left.length && q.some((i) => i.id === s.queueId)) return playItem(left[0]);
+    await setState({ status: "idle", index: 0, resumedFrom: null, queueId: null });
   }
   if (msg.event === "error") {
     await setState({ status: "error",
@@ -408,6 +449,7 @@ async function playerEvent(msg) {
 
 chrome.commands.onCommand.addListener((name) => {
   if (name === "toggle-reading") command({ cmd: "toggle" });
+  if (name === "add-to-queue") command({ cmd: "enqueue" }).catch(() => {});
 });
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
@@ -417,14 +459,114 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
                                contexts: ["selection"] });
   chrome.contextMenus.create({ id: "read-page", title: "Read this page aloud",
                                contexts: ["page"] });
+  chrome.contextMenus.create({ id: "queue-page", title: "Add this page to the Sawt queue",
+                               contexts: ["page"] });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "read-selection") readTab(tab, info.selectionText);
   if (info.menuItemId === "read-page") readTab(tab);
+  if (info.menuItemId === "queue-page") enqueue(tab).catch(() => {});
 });
 
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   readerTabIds.delete(tabId);
   if ((await getState()).tabId === tabId) stop();
+});
+
+// ---- Queue ----------------------------------------------------------------------------------
+// Articles to read one after another. Each item keeps the text taken when it was added, so its
+// tab can be closed: an item whose page is still open is read there, with the highlight on the
+// page; otherwise it is read from a reading copy opened in a background tab.
+const QUEUE_MAX = 30;        // items are up to 200k characters; chrome.storage.local holds 10MB
+
+async function getQueue() {
+  return (await chrome.storage.local.get("queue")).queue || [];
+}
+
+async function setQueue(queue) {
+  await chrome.storage.local.set({ queue });
+}
+
+// The text to read later, taken now while Sawt may read the tab (activeTab lasts only while the
+// page stays).
+async function snapshot(tab) {
+  if (tab.url?.startsWith(READER)) {
+    const key = "doc:" + new URL(tab.url).hash.slice(1);
+    const doc = (await chrome.storage.session.get(key))[key];
+    if (!doc) throw new Error("This reading copy is no longer available.");
+    const { title, text, url, source, pages, truncated } = doc;
+    return { title, text, url, source: source || "pdf", pages, truncated };
+  }
+  if (await isPdf(tab)) return { ...(await pdfDoc(tab)), url: tab.url, source: "pdf" };
+  let page;
+  try {
+    page = await extract(tab.id, true);
+  } catch {
+    throw new Error("Sawt can't read this page, so it can't be queued.");
+  }
+  if (!page?.text || page.text.trim().length < 20) {
+    throw new Error("No readable text found on this page, so there is nothing to queue.");
+  }
+  return { title: page.title || tab.title, text: page.text, url: tab.url, source: "article" };
+}
+
+// Returns {added, title} or {already, title} for the popup; the icon's badge counts the items.
+async function enqueue(tab) {
+  const s = await getState();
+  try {
+    const item = await snapshot(tab);
+    const queue = await getQueue();
+    const dup = queue.find((i) => pageKey(i.url) === pageKey(item.url));
+    if (dup) return { already: true, title: dup.title };
+    if (queue.length >= QUEUE_MAX) {
+      throw new Error(`The queue holds ${QUEUE_MAX} articles. Listen to some or remove a few first.`);
+    }
+    try {
+      await setQueue([...queue, { id: crypto.randomUUID(), ...item, at: Date.now() }]);
+    } catch {
+      throw new Error("There is no room left to save this article. Remove a few from the queue.");
+    }
+    return { added: true, title: item.title };
+  } catch (e) {
+    // from the shortcut or the menu there is no popup to show it; don't interrupt a reading
+    if (s.status !== "playing" && s.status !== "paused") {
+      await setState({ status: "error", error: e.message });
+    }
+    throw e;
+  }
+}
+
+async function playItem(item) {
+  const s = await getState();
+  if (s.tabId && s.chunks) toPage(s.tabId, { cmd: "clear" });
+  await setState({ status: "loading", error: null, title: item.title, chunks: null, index: 0,
+                   resumedFrom: null, queueId: item.id });
+  try {
+    const key = pageKey(item.url);
+    const open = item.source !== "pdf" && (await chrome.tabs.query({}))
+      .find((t) => !t.url?.startsWith(READER) && pageKey(t.url) === key);
+    if (open && (await injectHighlighter(open.id).then(() => true, () => false))) {
+      const saved = (await chrome.storage.local.get(POS + key))[POS + key];
+      await start({ text: `${item.title}\n\n${item.text}`, title: item.title, source: item.source,
+                    tabId: open.id, url: key, index: saved?.index || 0, saved, queueId: item.id });
+      return;
+    }
+    // the page was closed or navigated away, or can't be drawn on: read the copy taken when
+    // it was queued
+    const [current] = await chrome.tabs.query({ active: true, currentWindow: true });
+    await openCopy({ ...item, queueId: item.id },
+                   { active: false, ...(current ? { index: current.index + 1 } : {}) });
+  } catch (e) {
+    await setState({ status: "error", error: e.message });
+  }
+}
+
+function showCount(queue) {
+  chrome.action.setBadgeText({ text: queue.length ? String(queue.length) : "" });
+}
+chrome.action.setBadgeBackgroundColor({ color: "#0d9488" });
+getQueue().then(showCount);
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.queue) showCount(changes.queue.newValue || []);
 });

@@ -1,5 +1,6 @@
-// Shows the reading copy of a PDF (made by the engine, kept in chrome.storage.session under
-// "doc:<id>") and asks the background worker to read it. highlight.js runs on this page too:
+// Shows a reading copy (a PDF made readable by the engine, or a queued article whose tab is
+// gone; kept in chrome.storage.session under "doc:<id>") and asks the background worker to read
+// it. highlight.js runs on this page too:
 // the worker reaches it with runtime messages carrying this tab's id.
 (async () => {
   const $ = (id) => document.getElementById(id);
@@ -20,9 +21,12 @@
     const u = new URL(doc.url);
     where = u.protocol === "file:" ? decodeURIComponent(u.pathname.split("/").pop()) : u.hostname;
   } catch {}
-  $("meta").textContent = `${doc.pages} ${doc.pages === 1 ? "page" : "pages"} · ${where}`;
+  const pdf = (doc.source || "pdf") === "pdf";
+  $("kicker").textContent = pdf ? "PDF" : "From your queue";
+  $("meta").textContent = pdf && doc.pages
+    ? `${doc.pages} ${doc.pages === 1 ? "page" : "pages"} · ${where}` : where;
   $("original").href = doc.url;
-  $("truncated").hidden = !doc.truncated;
+  $("truncated").hidden = !(pdf && doc.truncated);
 
   // A heading is a short line that does not end like a sentence; the engine keeps those as
   // paragraphs of their own.

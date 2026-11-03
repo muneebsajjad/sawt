@@ -36,6 +36,13 @@ popup. The position is matched by sentence text, so an article edited since stil
 right place. Finishing an article forgets it; the 300 most recent pages are kept. Selections
 are never saved.
 
+**Queue.** `Alt+Q`, **Add this page** in the popup, or right-click → **Add this page to the Sawt
+queue** saves the page's article (or a PDF's reading copy) in `chrome.storage.local`, up to 30
+items. **Play the queue** reads them in order. An item whose page is still open in a tab is read
+there, with the highlight; otherwise it opens as a reading copy in a background tab. A finished
+article leaves the queue, whichever way it was started; **Skip to the next article** drops the
+current one. Each item resumes like any page. The toolbar badge shows how many are waiting.
+
 **Meanings of hard words.** When a sentence holds a word most readers would look up, a card
 beside the article explains it while the sentence is read; reading never pauses. Meanings come
 from two places, both on your computer: an acronym the article spells out itself ("maximum

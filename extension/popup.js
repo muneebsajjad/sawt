@@ -4,7 +4,10 @@ const DEFAULTS = { voice: "bm_fable", speed: 1.1, meanings: "3.0", zoom: false }
 
 const send = (cmd, extra = {}) => chrome.runtime.sendMessage({ to: "bg", cmd, ...extra });
 
+let player = { status: "idle" };
+
 function render(p = { status: "idle" }) {
+  player = p;
   const total = p.chunks?.length || 0;
   const active = p.status === "playing" || p.status === "paused";
 
@@ -31,6 +34,58 @@ function render(p = { status: "idle" }) {
   for (const id of ["prev", "toggle", "next", "stop"]) $(id).disabled = !active;
   $("toggle").textContent = p.status === "paused" ? "▶" : "⏸";
   if (active) renderWords(); else $("words").hidden = true;
+  chrome.storage.local.get("queue").then(({ queue }) => renderQueue(queue));
+}
+
+function host(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "file:" ? decodeURIComponent(u.pathname.split("/").pop()) : u.hostname;
+  } catch {
+    return "";
+  }
+}
+
+function renderQueue(queue = []) {
+  const now = player.queueId;
+  const fromQueue = queue.some((i) => i.id === now)
+    && ["loading", "playing", "paused"].includes(player.status);
+  $("queue-count").textContent = queue.length ? `· ${queue.length}` : "";
+  $("queue-empty").hidden = queue.length > 0;
+  $("queue-play").hidden = !queue.length;
+  $("queue-play").textContent = fromQueue
+    ? (queue.length > 1 ? "Skip to the next article" : "Done with this one")
+    : "Play the queue";
+  $("queue-list").replaceChildren(...queue.map((item) => {
+    const li = document.createElement("li");
+    li.classList.toggle("now", fromQueue && item.id === now);
+    const play = document.createElement("button");
+    play.className = "item";
+    play.title = "Read this one now";
+    const t = document.createElement("span");
+    t.className = "t";
+    t.textContent = item.title || host(item.url);
+    const h = document.createElement("span");
+    h.className = "h muted";
+    h.textContent = (fromQueue && item.id === now ? "Now reading · " : "")
+      + (item.source === "pdf" ? "PDF · " : "") + host(item.url);
+    play.append(t, h);
+    play.onclick = () => send("playQueue", { id: item.id });
+    const del = document.createElement("button");
+    del.className = "del";
+    del.title = "Remove from the queue";
+    del.setAttribute("aria-label", `Remove ${item.title} from the queue`);
+    del.textContent = "×";
+    del.onclick = () => send("dequeue", { id: item.id });
+    li.append(play, del);
+    return li;
+  }));
+}
+
+function note(text, isError = false) {
+  $("queue-note").hidden = !text;
+  $("queue-note").textContent = text || "";
+  $("queue-note").classList.toggle("err", isError);
 }
 
 // Every word explained (or due to be) in this article, so it can be reviewed afterwards.
@@ -51,7 +106,7 @@ async function renderWords() {
 async function checkEngine() {
   const ok = !!(await send("health"));
   $("setup").hidden = ok;
-  for (const id of ["read", "controls", "settings", "zoom-row"]) $(id).hidden = !ok;
+  for (const id of ["read", "controls", "queue", "settings", "zoom-row"]) $(id).hidden = !ok;
   return ok;
 }
 
@@ -84,6 +139,18 @@ $("prev").onclick = () => send("prev");
 $("next").onclick = () => send("next");
 $("stop").onclick = () => send("stop");
 $("restart").onclick = () => send("restart");
+$("queue-add").onclick = async () => {
+  $("queue-add").disabled = true;
+  note("Saving this page…");
+  const r = await send("enqueue");
+  $("queue-add").disabled = false;
+  if (r?.error) note(r.error, true);
+  else note(r?.already ? "Already in the queue." : "Added. Close the tab whenever you like.");
+};
+$("queue-play").onclick = () => {
+  const reading = player.queueId && ["loading", "playing", "paused"].includes(player.status);
+  send(reading ? "skip" : "playQueue");
+};
 $("setup-open").onclick = () => send("setup").then(() => window.close());
 $("voice").onchange = changeSettings;
 $("speed").onchange = changeSettings;
@@ -95,6 +162,9 @@ $("meanings").onchange = () => send("meanings", { value: $("meanings").value }).
 
 chrome.storage.session.onChanged.addListener((changes) => {
   if (changes.player) render(changes.player.newValue);
+});
+chrome.storage.local.onChanged.addListener((changes) => {
+  if (changes.queue) renderQueue(changes.queue.newValue);
 });
 
 chrome.storage.session.get("player").then(({ player }) => render(player));

@@ -13,6 +13,14 @@
 - Very long PDFs are read up to the article limit (about 200,000 characters); the reading copy
   says so. Whole books still belong in `sawt extract`.
 
+- **A reading queue.** Press `Alt+Q`, choose **Add this page** in the popup, or right-click
+  a page, to save an article or PDF for later; then **Play the queue** reads them one after
+  another. The text is saved when you add it, so you can close the tab: an article whose tab is
+  still open is read there with its highlight, and one whose tab is gone opens as a reading
+  copy in the background. A finished article leaves the queue, and the toolbar icon shows how
+  many are waiting. Everything stays in the browser on your computer. `Alt+Q` is new, so if
+  Chrome gave it to another extension, set it in `chrome://extensions/shortcuts`.
+
 ### Fixed
 - **`sawt agent install` could fail on macOS when restarting the engine** (`launchctl bootstrap`
   status 5): launchd had not finished stopping the old engine yet. It now waits and retries.

@@ -18,7 +18,7 @@
   }
 
   const selection = String(window.getSelection() || "").trim();
-  if (selection.length > 40) {
+  if (selection.length > 40 && !window.__sawtWhole) {     // queueing takes the whole page
     return { title: "", text: selection, source: "selection" };
   }
 

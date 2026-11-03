@@ -32,6 +32,18 @@
     <button id="stop" title="Stop">⏹</button>
   </div>
 
+  <section id="queue">
+    <div class="queue-head">
+      <b>Queue <span id="queue-count" class="muted"></span></b>
+      <button id="queue-add" title="Save this page to listen to later (Alt+Q)">Add this page</button>
+    </div>
+    <p id="queue-note" hidden></p>
+    <ol id="queue-list"></ol>
+    <p id="queue-empty" class="muted">Add articles here and Sawt reads them one after another.
+      You can close their tabs.</p>
+    <button id="queue-play" hidden>Play the queue</button>
+  </section>
+
   <div id="settings">
     <label>Voice <select id="voice"></select></label>
     <label>Speed
@@ -73,6 +85,7 @@
     <ul id="words-list"></ul>
   </details>
 
-  <footer class="muted">Alt+R reads or pauses · right-click a selection to read just that</footer>
+  <footer class="muted">Alt+R reads or pauses · Alt+Q adds to the queue · right-click a selection
+    to read just that</footer>
   <script src="popup.js"></script>
 </body>
