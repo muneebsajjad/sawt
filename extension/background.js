@@ -478,7 +478,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 // Articles to read one after another. Each item keeps the text taken when it was added, so its
 // tab can be closed: an item whose page is still open is read there, with the highlight on the
 // page; otherwise it is read from a reading copy opened in a background tab.
-const QUEUE_MAX = 30;        // items are up to 200k characters; chrome.storage.local holds 10MB
+const QUEUE_MAX = 3;         // a short list to get through, not a reading backlog
 
 async function getQueue() {
   return (await chrome.storage.local.get("queue")).queue || [];
@@ -520,7 +520,7 @@ async function enqueue(tab) {
     const dup = queue.find((i) => pageKey(i.url) === pageKey(item.url));
     if (dup) return { already: true, title: dup.title };
     if (queue.length >= QUEUE_MAX) {
-      throw new Error(`The queue holds ${QUEUE_MAX} articles. Listen to some or remove a few first.`);
+      throw new Error(`The queue holds ${QUEUE_MAX} articles. Listen to one or remove one first.`);
     }
     try {
       await setQueue([...queue, { id: crypto.randomUUID(), ...item, at: Date.now() }]);

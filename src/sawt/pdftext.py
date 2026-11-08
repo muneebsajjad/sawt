@@ -77,18 +77,86 @@ def _join_hyphen(cur, line):
 
 FOOTNOTE = re.compile(r'^[∗*†‡§¶]')
 CONTACT = re.compile(r'^(\S+@\S+|https?://\S+|www\.\S+)(\s+(\S+@\S+|https?://\S+|www\.\S+))*$')
+# Notices nobody wants read: where the paper appeared, licences, preprint stamps, author notes.
+NOTICE = re.compile(r'^(\d+(st|nd|rd|th)\s+(annual\s+)?(conference|workshop|international)|'
+                    r'proceedings of|published (as|in|at)\b|preprint|under review|arxiv:|'
+                    r'(provided proper attribution|permission to (make|reproduce))|copyright|©|'
+                    r'(work|research) (was )?(done|performed|conducted) (while|during|at)|'
+                    r'equal contribution|corresponding author|author contributions|'
+                    r'accepted (to|at|for)\b|license[ds]? under|this work is licensed|'
+                    r'code (and \S+ )?(is |are )?available)', re.I)
+CAPTION = re.compile(r'^(figure|fig\.|table|algorithm|listing)\s*[A-Z]?\d+[.:]', re.I)
+DOT_LEADER = re.compile(r'(\.\s?){5,}')
+AFFILIATION = re.compile(r'\b(universit|institut|college|school of|department|dept\.|faculty|'
+                         r'laborator|lab\b|centre|center for|academy|research|inc\.|corp|ltd|'
+                         r'gmbh|foundation|hospital|google|microsoft|meta|openai|deepmind|'
+                         r'anthropic|nvidia|amazon|apple|ibm|baidu|alibaba|tencent)', re.I)
+NAME_WORD = re.compile(r"^([A-Z][\w'’.-]*|[A-Z]\.|and|&|de|van|von|der|da|di|le|la|y)[,∗*†‡§¶\d]*$")
+
+
+def _is_byline(p, loose=True):
+    """Authors, affiliations, emails, addresses: the block under a paper's title. loose: also
+    affiliations and lines of nothing but names, which a title in title case can look like."""
+    if "@" in p or CONTACT.match(p) or NOTICE.match(p) or FOOTNOTE.match(p):
+        return True
+    if not loose or SECTION_NAMES.match(p) or HEADING_NUM.match(p):
+        return False
+    if len(p) <= 200 and AFFILIATION.search(p) and not ENDS_SENTENCE.search(p):
+        return True
+    names = p.replace(",", " ").split()
+    return (0 < len(names) <= 30 and not ENDS_SENTENCE.search(p)
+            and all(NAME_WORD.match(w) for w in names))
+
+
+SMALL_WORDS = {"a", "an", "the", "of", "for", "and", "or", "in", "on", "to", "with", "via", "from",
+               "by", "at", "as", "towards", "into", "beyond", "without"}
+
+
+def _unsmallcap(line):
+    """Small capitals come out as "L OW-R ANK" and "I NTRODUCTION": rejoin the split words."""
+    from wordfreq import zipf_frequency
+    def join(m):
+        head, rest = m[1], m[2]
+        if zipf_frequency((head + rest).lower(), "en") > zipf_frequency(rest.lower(), "en"):
+            return head + rest
+        return m[0]
+    return re.sub(r'\b([A-Z]) ([A-Z]{2,})', join, line)
+
+
+def _title_of(paras):
+    """The first heading-shaped line, with the next line when the title runs onto it
+    ("... Transformers for" / "Language Understanding")."""
+    for i, q in enumerate(paras):
+        if _is_heading(q) and len(q.split()) >= 2 and not _is_byline(q, loose=False):
+            nxt = paras[i + 1] if i + 1 < len(paras) else ""
+            last = q.split()[-1].lower()
+            if nxt and _is_heading(nxt) and (q.endswith("-") or last in SMALL_WORDS):
+                q = _join_hyphen(q, nxt) if q.endswith("-") else f"{q} {nxt}"
+            return q, i
+    return None, -1
 
 
 def _front_matter(paras):
     """Papers open with names, affiliations and emails. When an Abstract comes early, start
-    there, and return the title found above it (the first heading-shaped line)."""
+    there; otherwise skip the author block under the title. Returns the title found there."""
     for i, p in enumerate(paras[:60]):
         m = re.search(r'(^|\s)abstract\b[.:—-]?\s*', p, re.I)
         if m and m.start() < 150 and (m.start() == 0 or CONTACT.match(p[:m.start()].strip())
                                      or len(p[:m.start()].split()) <= 4):
-            title = next((q for q in paras[:i] if _is_heading(q) and len(q.split()) >= 2), None)
+            title, _ = _title_of(paras[:i])
             rest = p[m.end():].strip()
             return title, ([rest] if rest else []) + paras[i + 1:]
+    # no Abstract: a title, then a run of names, affiliations and emails, then the text
+    head = paras[:40]
+    title, t = _title_of(head[:8])
+    if title is None:
+        return None, paras
+    j = t + 1
+    while j < len(head) and (_is_byline(head[j]) or title.startswith(head[j])
+                             or (title.endswith(head[j]) and j == t + 1)):
+        j += 1
+    if j - t - 1 >= 2 or any("@" in q or AFFILIATION.search(q) for q in head[t + 1:j]):
+        return title, paras[:t] + paras[j:]
     return None, paras
 
 
@@ -170,6 +238,24 @@ def _without_references(paras):
     return paras
 
 
+def _is_clutter(p):
+    """Anywhere in the text: footnotes, contact lines, notices, figure and table captions, and
+    the dot leaders of a table of contents."""
+    return bool(FOOTNOTE.match(p) or CONTACT.match(p) or CAPTION.match(p) or DOT_LEADER.search(p)
+                or (len(p) < 400 and NOTICE.match(p))
+                or (len(p) < 300 and re.match(r'^\d{1,2}[A-Z][a-z]', p))     # "1All code is..."
+                or re.match(r'^(table of )?contents$', p, re.I))
+
+
+def _without_contents(paras):
+    """A table of contents: numbered headings ending in a page number ("2 Approach 6"), several
+    together. One alone is a real heading ("4.2 Convergence of Algorithm 1")."""
+    toc = [bool(HEADING_NUM.match(p) and _is_heading(p) and re.search(r'\s\d{1,3}$', p))
+           for p in paras]
+    near = lambda i: sum(toc[max(0, i - 2):i + 3]) >= 2
+    return [p for i, p in enumerate(paras) if not (toc[i] and near(i))]
+
+
 def read(data, filename="", limit=200_000):
     """PDF bytes -> {"title", "text", "pages", "truncated"}; text is paragraphs separated by
     blank lines, title plus text at most `limit` characters (the reader's limit)."""
@@ -181,8 +267,9 @@ def read(data, filename="", limit=200_000):
     except (PdfReadError, ValueError, KeyError, TypeError) as e:
         raise NoText("This file could not be opened as a PDF.") from e
     pages = [[_norm(l) for l in t.split("\n")] for t in raw]
-    paras = [p for p in _without_references(paragraphs(pages))
-             if not FOOTNOTE.match(p) and not CONTACT.match(p)]
+    paras = [_unsmallcap(p) if _is_heading(p) else p
+             for p in _without_references(paragraphs(pages))]
+    paras = _without_contents([p for p in paras if not _is_clutter(p)])
     if not paras:
         raise NoText("This PDF has no text to read: it is probably a scanned image.")
     front_title, paras = _front_matter(paras)

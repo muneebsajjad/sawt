@@ -50,7 +50,7 @@ function renderQueue(queue = []) {
   const now = player.queueId;
   const fromQueue = queue.some((i) => i.id === now)
     && ["loading", "playing", "paused"].includes(player.status);
-  $("queue-count").textContent = queue.length ? `· ${queue.length}` : "";
+  $("queue-count").textContent = queue.length ? `· ${queue.length} of 3` : "";
   $("queue-empty").hidden = queue.length > 0;
   $("queue-play").hidden = !queue.length;
   $("queue-play").textContent = fromQueue

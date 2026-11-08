@@ -59,3 +59,58 @@ def test_reference_list_is_cut():
 def test_not_a_pdf():
     with pytest.raises(pdftext.NoText):
         pdftext.read(b"not a pdf at all")
+
+
+def test_author_block_is_skipped_without_an_abstract():
+    paras = ["Attention Is All You Need", "Ashish Vaswani∗", "Google Brain",
+             "avaswani@google.com", "Noam Shazeer, Niki Parmar", "Department of Computer Science",
+             "University of Toronto", "1 Introduction", "Recurrent models came first."]
+    title, body = pdftext._front_matter(paras)
+    assert title == "Attention Is All You Need"
+    assert body == ["1 Introduction", "Recurrent models came first."]
+
+
+def test_a_title_followed_by_one_heading_is_not_a_byline():
+    paras = ["The Long Walk Home", "Chapter One", "It was raining."]
+    assert pdftext._front_matter(paras) == (None, paras)
+
+
+def test_a_title_that_runs_onto_the_next_line():
+    title, _ = pdftext._front_matter(["BERT: Pre-training of Deep Bidirectional Transformers for",
+                                      "Language Understanding", "Jacob Devlin Ming-Wei Chang",
+                                      "Google AI Language", "Abstract", "We introduce BERT."])
+    assert title == "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"
+
+
+def test_small_capitals_are_rejoined():
+    assert pdftext._unsmallcap("LORA: L OW-R ANK ADAPTATION") == "LORA: LOW-RANK ADAPTATION"
+    assert pdftext._unsmallcap("1 I NTRODUCTION") == "1 INTRODUCTION"
+    assert pdftext._unsmallcap("A SIMPLE BASELINE") == "A SIMPLE BASELINE"
+
+
+@pytest.mark.parametrize("p", [
+    "31st Conference on Neural Information Processing Systems (NIPS 2017), Long Beach, CA, USA.",
+    "Provided proper attribution is provided, Google hereby grants permission to reproduce.",
+    "arXiv:1706.03762v7 [cs.CL] 2 Aug 2023", "Published as a conference paper at ICLR 2022",
+    "∗Equal contribution. Listing order is random.", "Author contributions listed at end of paper.",
+    "Work done while at Google Brain.", "Figure 1: The Transformer - model architecture.",
+    "Table 2: Results on the test set.", "Contents",
+    "2.1 Model and Architectures . . . . . . . . . . . 8",
+    "1All code and hyperparameters available at http://www.github.com/x"])
+def test_clutter_is_left_out(p):
+    assert pdftext._is_clutter(p)
+
+
+@pytest.mark.parametrize("p", [
+    "1 Introduction", "Figures of speech are everywhere in the text that follows here.",
+    "Published work in this area is scarce, and we set out to change that.",
+    "The table shows that the model wins on every task we tried."])
+def test_prose_is_kept(p):
+    assert not pdftext._is_clutter(p)
+
+
+def test_table_of_contents_is_cut_but_a_heading_ending_in_a_number_is_kept():
+    paras = ["Contents", "1 Introduction 3", "2 Approach 6", "3 Results 10", "1 Introduction",
+             "Text.", "4.2 Convergence of Algorithm 1", "More text."]
+    paras = pdftext._without_contents([p for p in paras if not pdftext._is_clutter(p)])
+    assert paras == ["1 Introduction", "Text.", "4.2 Convergence of Algorithm 1", "More text."]

@@ -16,8 +16,8 @@ ever sent to a server: the voice model ([Kokoro](https://huggingface.co/hexgrad/
 - **Read any article aloud** from the browser: one click or `Alt+R`. Menus, ads and sidebars
   are skipped, the sentence being spoken is highlighted, and every page resumes where you left off.
 - **Read PDFs too.** Open a PDF in Chrome and press `Alt+R`: Sawt opens a clean reading copy
-  beside it (headings and paragraphs, without page numbers, running headers, citation markers
-  or the reference list) and reads that, with highlighting, meanings and resume.
+  beside it (headings and paragraphs, without the author list, page numbers, running headers,
+  captions, citation markers or the reference list) and reads that, with highlighting, meanings and resume.
 - **A reading queue.** Press `Alt+Q` on articles and PDFs as you come across them, close the
   tabs, and later press **Play the queue**: Sawt reads them one after another.
 - **Meanings of hard words as you listen.** When a sentence holds a word like "myopic", a small

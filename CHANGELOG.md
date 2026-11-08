@@ -7,7 +7,9 @@
   The engine turns it into readable text and Sawt opens a reading copy in the next tab: the
   PDF's headings and paragraphs, without page numbers, running headers, footnote symbols,
   numeric citations like "[13]", tables, code or the reference list. Highlighting, meanings,
-  word zoom and resume work there as on any article. Research papers start at the abstract.
+  word zoom and resume work there as on any article. Research papers skip the authors,
+  universities and emails and start at the abstract (or the first section when there is none),
+  and leave out figure and table captions, venue and copyright notices, and the contents page.
 - PDFs saved on your computer work once **Allow access to file URLs** is on for Sawt in
   `chrome://extensions`; Sawt says so when it is needed.
 - Very long PDFs are read up to the article limit (about 200,000 characters); the reading copy
@@ -18,7 +20,7 @@
   another. The text is saved when you add it, so you can close the tab: an article whose tab is
   still open is read there with its highlight, and one whose tab is gone opens as a reading
   copy in the background. A finished article leaves the queue, and the toolbar icon shows how
-  many are waiting. Everything stays in the browser on your computer. `Alt+Q` is new, so if
+  many are waiting (it holds three). Everything stays in the browser on your computer. `Alt+Q` is new, so if
   Chrome gave it to another extension, set it in `chrome://extensions/shortcuts`.
 
 ### Fixed
