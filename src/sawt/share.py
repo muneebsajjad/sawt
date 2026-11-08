@@ -85,6 +85,8 @@ class Share:
                "seconds": round(self.seconds), "fetched": self.fetched}
         if self.state == "ready":
             out["url"] = self.url
+            # what the phone's own address must start with to be on the same network
+            out["network"] = self.url.split("//")[1].rsplit(".", 1)[0] + "."
             out["expiresIn"] = max(0, round(self.expires - time.time()))
             out["size"] = self.file.stat().st_size if self.file.exists() else 0
             out["qr"] = qr_data_uri(self.url)

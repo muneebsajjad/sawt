@@ -285,7 +285,7 @@ footer { margin-top: 10px; font-size: 11px; }
 .share-btn { width: 100%; margin-top: 8px; display: flex; align-items: center;
              justify-content: center; gap: 6px; }
 .share-btn[hidden], #share[hidden], #share-working[hidden], #share-ready[hidden],
-#share-error[hidden] { display: none; }
+#share-error[hidden], #share-how[hidden], #share-net[hidden] { display: none; }
 #share { margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px;
          background: var(--surface); text-align: center; }
 #share p { margin: 0 0 8px; }

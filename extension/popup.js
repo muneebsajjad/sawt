@@ -114,6 +114,8 @@ function renderShare(st) {
     $("share-what").textContent = st.fetched ? "✓ Your phone has it"
       : `${what} · ${min} min of audio`;
     $("share-how").hidden = st.fetched;
+    $("share-net").hidden = st.fetched || !st.network;
+    $("share-prefix").textContent = st.network || "";
     $("share-done").textContent = st.fetched ? "Done" : `Stop sharing (link closes in ${left} min)`;
   } else {
     $("share-done").textContent = "Close";
