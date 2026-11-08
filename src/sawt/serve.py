@@ -21,7 +21,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 import soundfile as sf
 
-from . import __version__, glossary, models, paths, pdftext, wordtime
+from . import __version__, glossary, models, paths, pdftext, share, wordtime
 from .synth import apply_dict, chunk, chunk_key, load_dict
 from .textnorm import normalize
 
@@ -92,6 +92,9 @@ class Engine:
         self.next_sid = 1
         self.cond = threading.Condition()
         self.failed = set()           # keys that could not even be stored: skipped, not retried
+        # the reader's worker and a phone share both speak; espeak, under Kokoro, is not
+        # thread-safe, so one chunk at a time (chunks are short, so reading stays responsive)
+        self.speak_lock = threading.Lock()
         self.worker = threading.Thread(target=self._worker, daemon=True)
         self.worker.start()
 
@@ -175,6 +178,10 @@ class Engine:
         silence = np.zeros(int(SILENCE_SR * SILENCE_SECONDS), dtype="float32"), SILENCE_SR, []
         if not SPEAKABLE_RE.search(text):
             return silence
+        with self.speak_lock:
+            return self._speak_locked(text, voice, speed, silence)
+
+    def _speak_locked(self, text, voice, speed, silence):
         try:
             if self.timed:
                 audio, sr, timings = self.kokoro.create_timed(text, voice=voice, speed=speed,
@@ -199,6 +206,22 @@ class Engine:
             tt.write_text(json.dumps({"words": [[round(a, 3), round(b, 3)] for a, b in words]}))
             tt.replace(self.timing_path(key))
         tmp.replace(cached)
+
+    def audio_of(self, key, text, voice, speed):
+        """One chunk's samples, from the cache when it is there; made and cached otherwise, so
+        a shared article plays instantly in the browser later, and the other way round."""
+        if self.path(key).exists():
+            try:
+                audio, _ = sf.read(self.path(key), dtype="float32")
+                return audio
+            except Exception:
+                pass                                 # a damaged cache file: make it again
+        audio, sr, words = self._speak(text, voice, speed)
+        try:
+            self._store(key, audio, sr, words)
+        except Exception as e:
+            print(f"could not cache chunk {key} ({e})", file=sys.stderr, flush=True)
+        return audio
 
     def _worker(self):
         while True:
@@ -239,6 +262,7 @@ class Engine:
 
 class Handler(BaseHTTPRequestHandler):
     engine = None
+    shares = None
     port = PORT
     extension_ids = set()                # empty: any chrome-extension:// origin (development)
 
@@ -295,6 +319,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200 if alive else 503, body)
         if self.path == "/voices":
             return self._send(200, {"voices": self.engine.voices})
+        m = re.match(r'^/share/([0-9a-f]{16})$', self.path)
+        if m:
+            s = self.shares.get(m[1])
+            if s is None:
+                return self._send(404, {"error": "no such share"})
+            return self._send(200, s.status())
         m = re.match(r'^/chunk/([0-9a-f]+)\.words\.json$', self.path)
         if m and KEY_RE.match(m.group(1)):
             words = self.engine.word_times(m.group(1))
@@ -316,7 +346,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._pdf()
         try:
             n = int(self.headers.get("Content-Length", 0))
-            if n > MAX_TEXT * 4:
+            limit = MAX_TEXT * 4 * (share.MAX_ITEMS if self.path == "/share" else 1)
+            if n > limit:
                 return self._send(413, {"error": "article too long"})
             req = json.loads(self.rfile.read(n) or b"{}")
         except (ValueError, json.JSONDecodeError):
@@ -325,8 +356,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/stop":
             self.engine.stop()
             return self._send(200, {"ok": True})
-        if self.path == "/read":
-            text = str(req.get("text", ""))[:MAX_TEXT]
+        m = re.match(r'^/share/([0-9a-f]{16})/stop$', self.path)
+        if m:
+            self.shares.stop(m[1])
+            return self._send(200, {"ok": True})
+        if self.path in ("/read", "/share"):
             voice = req.get("voice", "af_bella")
             if voice not in self.engine.voices:
                 return self._send(400, {"error": f"unknown voice {voice}"})
@@ -336,6 +370,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {"error": "bad speed"})
             if not 0.5 <= speed <= 2.0:
                 return self._send(400, {"error": "speed must be 0.5-2.0"})
+        if self.path == "/share":
+            items = req.get("items")
+            if not isinstance(items, list):
+                return self._send(400, {"error": "no items"})
+            items = [{"title": i.get("title"), "text": str(i.get("text", ""))[:MAX_TEXT]}
+                     for i in items if isinstance(i, dict)]
+            try:
+                s = self.shares.start(items, voice, speed)
+            except share.ShareError as e:
+                return self._send(400, {"error": str(e)})
+            return self._send(200, s.status())
+        if self.path == "/read":
+            text = str(req.get("text", ""))[:MAX_TEXT]
             if not text.strip():
                 return self._send(400, {"error": "no text"})
             s, sentences = self.engine.start(text, voice, speed, int(req.get("start", 0)))
@@ -364,6 +411,9 @@ def main():
     print("loading Kokoro…", flush=True)
     Handler.engine = Engine(paths.CACHE, dpath if dpath.is_absolute() else paths.ROOT / dpath)
     glossary.load_in_background(Handler.engine)
+    Handler.shares = share.Shares(Handler.engine)
+    for old in (paths.WORK / "share").glob("*"):     # left by a share the engine died during
+        old.unlink(missing_ok=True)
     Handler.port = args.port
     env_ids = os.environ.get("SAWT_EXTENSION_IDS", "")
     Handler.extension_ids = (PUBLISHED_EXTENSION_IDS | set(args.allow_extension)

@@ -43,6 +43,15 @@ there, with the highlight; otherwise it opens as a reading copy in a background 
 article leaves the queue, whichever way it was started; **Skip to the next article** drops the
 current one. Each item resumes like any page. The toolbar badge shows how many are waiting.
 
+**Send to my phone.** The popup's **Send to my phone** posts the queue's items (or this page,
+when the queue is empty) to the engine's `/share`, with the current voice and speed. The engine
+speaks every chunk (reusing and filling the same audio cache the reader uses), writes one MP3
+to `~/Sawt/work/share/`, and opens a second server on the computer's private LAN address,
+answering only `/<token>` (a phone-sized page with a player and **Save to phone**) and
+`/<token>/audio.mp3` (with byte ranges, which Safari needs). The popup polls `/share/<id>` for
+progress, then shows the link as a QR code, and "Your phone has it" once the audio was fetched.
+The link closes after 15 minutes, on **Stop sharing**, or when a new share replaces it.
+
 **Meanings of hard words.** When a sentence holds a word most readers would look up, a card
 beside the article explains it while the sentence is read; reading never pauses. Meanings come
 from two places, both on your computer: an acronym the article spells out itself ("maximum

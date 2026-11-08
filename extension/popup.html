@@ -42,6 +42,25 @@
     <p id="queue-empty" class="muted">Add articles here and Sawt reads them one after another.
       You can close their tabs.</p>
     <button id="queue-play" hidden>Play the queue</button>
+    <button id="share-start" class="share-btn" title="Make an MP3 and send it to a phone on this Wi-Fi">
+      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span id="share-label">Send to my phone</span>
+    </button>
+    <div id="share" hidden>
+      <div id="share-working">
+        <p id="share-progress-text">Making the audio…</p>
+        <div class="bar"><i id="share-bar"></i></div>
+        <p class="muted small">You can close this popup; it keeps going.</p>
+      </div>
+      <div id="share-ready">
+        <img id="share-qr" alt="QR code for the phone link" width="176" height="176">
+        <p id="share-what"></p>
+        <p class="muted small" id="share-how">Scan with your phone's camera, then tap
+          <b>Save to phone</b>. Your phone needs to be on the same Wi-Fi as this computer.</p>
+      </div>
+      <p id="share-error" hidden></p>
+      <button id="share-done">Cancel</button>
+    </div>
   </section>
 
   <div id="settings">

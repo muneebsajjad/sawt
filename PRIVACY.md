@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Last updated: 30 October 2026_
+_Last updated: 8 November 2026_
 
 Sawt reads web pages aloud using a voice engine that runs on your own computer.
 It is built so that what you read never leaves your machine.
@@ -14,6 +14,9 @@ It is built so that what you read never leaves your machine.
 - **Your reading position.** The last sentence you heard on each page is saved in your browser's
   extension storage, so reading the page again resumes where you stopped. The 300 most recent
   pages are kept; finishing an article deletes its entry. This never leaves your browser.
+- **Your queue.** Articles you add to the queue are saved, with their text, in your browser's
+  extension storage until you listen to them or remove them (at most three). This never leaves
+  your browser.
 - **Your settings** (voice, speed, how many hard words to explain, word zoom, appearance) and the
   words you marked "Don't explain again", stored the same way. They never leave your browser.
 
@@ -31,6 +34,14 @@ delete at any time. The only network access it ever makes is a one-time download
 the voice model (from the kokoro-onnx GitHub releases page) and of the word glossary (from
 Sawt's own GitHub releases page). Word meanings are looked up in that file on your computer;
 the words you read are never sent anywhere to be defined.
+
+**Send to my phone.** Only when you click it, the engine makes an MP3 of the article (or your
+queue) and makes it available to devices on your own local network (your Wi-Fi), at a link
+with a long random secret in it, shown to you as a QR code. That link closes after 15 minutes,
+when you click "Stop sharing", or when you send something else, and the MP3 is then deleted.
+Your phone fetches the file directly from your computer; it does not go through the internet
+or any server of ours. While the link is open, someone else on the same network who had that
+exact link could download the same file, which is why it is long, random and short-lived.
 
 A meaning card has a "From Wiktionary" link. Wiktionary is contacted only if you click it.
 

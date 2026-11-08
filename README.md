@@ -20,6 +20,9 @@ ever sent to a server: the voice model ([Kokoro](https://huggingface.co/hexgrad/
   captions, citation markers or the reference list) and reads that, with highlighting, meanings and resume.
 - **A reading queue.** Press `Alt+Q` on articles and PDFs as you come across them, close the
   tabs, and later press **Play the queue**: Sawt reads them one after another.
+- **Send to your phone.** One click turns the article (or your whole queue) into an MP3 and
+  shows a QR code; scan it with your phone, tap **Save to phone**, and listen on the way home.
+  It goes straight from your computer over your Wi-Fi: no cloud, no account, no app.
 - **Meanings of hard words as you listen.** When a sentence holds a word like "myopic", a small
   card beside the article explains it, from an offline dictionary or from the article itself
   ("maximum allowable operating pressure (MAOP)"). Reading never pauses.
@@ -86,6 +89,7 @@ Its setup page checks that the engine is running.
 | `Alt+R` again | Pause / resume |
 | `Alt+Q`, or popup → **Add this page** | Save it to the queue (the tab can then be closed) |
 | Popup → **Play the queue** | Read the queue in order; each finished article leaves it |
+| Popup → **Send to my phone** | An MP3 of the queue (or this page) for your phone, by QR code over your Wi-Fi |
 | Right-click selected text → **Read selection aloud** | Hear just that, when the page's article detection picks the wrong block |
 | Popup → voice / speed | Change it mid-article; reading continues from the current sentence |
 
@@ -132,6 +136,9 @@ English only for now. Firefox and Safari are not supported yet.
 ## Privacy and security
 
 - The extension reads a page only when you ask, and sends its text only to `127.0.0.1`.
+- **Send to my phone** is the one time the engine is reachable from another device: it opens a
+  link on your local network with a long random secret, serving only that one MP3, for 15
+  minutes at most. Nothing goes to the internet.
 - The engine makes network requests only to download two files once, on first start: the voice
   model and the word glossary, both from GitHub and both verified against pinned SHA-256 hashes.
 - The engine refuses requests from web pages and from other extensions. Details in

@@ -47,6 +47,8 @@ function host(url) {
 }
 
 function renderQueue(queue = []) {
+  queueLength = queue.length;
+  if ($("share").hidden) renderShare(null);
   const now = player.queueId;
   const fromQueue = queue.some((i) => i.id === now)
     && ["loading", "playing", "paused"].includes(player.status);
@@ -81,6 +83,60 @@ function renderQueue(queue = []) {
     return li;
   }));
 }
+
+// ---- Send to phone ----
+let shareTimer = null;
+let queueLength = 0;
+
+function renderShare(st) {
+  const live = st && ["working", "ready", "error"].includes(st.state);
+  $("share").hidden = !live;
+  $("share-start").hidden = live;
+  $("share-label").textContent = queueLength > 1 ? "Send the queue to my phone"
+    : queueLength === 1 ? "Send the queued article to my phone" : "Send this page to my phone";
+  clearTimeout(shareTimer);
+  if (!live) return;
+  $("share-working").hidden = st.state !== "working";
+  $("share-ready").hidden = st.state !== "ready";
+  $("share-error").hidden = st.state !== "error";
+  $("share-error").textContent = st.error || "";
+  if (st.state === "working") {
+    const pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
+    $("share-progress-text").textContent = `Making the audio… ${pct}%`;
+    $("share-bar").style.width = `${pct}%`;
+    $("share-done").textContent = "Cancel";
+  } else if (st.state === "ready") {
+    if ($("share-qr").src !== st.qr) $("share-qr").src = st.qr;
+    const what = st.titles.length > 1 ? `${st.titles.length} articles` : st.titles[0];
+    const min = Math.max(1, Math.round(st.seconds / 60));
+    const left = Math.ceil(st.expiresIn / 60);
+    $("share-what").classList.toggle("sent", st.fetched);
+    $("share-what").textContent = st.fetched ? "✓ Your phone has it"
+      : `${what} · ${min} min of audio`;
+    $("share-how").hidden = st.fetched;
+    $("share-done").textContent = st.fetched ? "Done" : `Stop sharing (link closes in ${left} min)`;
+  } else {
+    $("share-done").textContent = "Close";
+  }
+  if (st.state !== "error") shareTimer = setTimeout(pollShare, st.state === "working" ? 700 : 2000);
+}
+
+async function pollShare() {
+  renderShare(await send("shareStatus"));
+}
+
+$("share-start").onclick = async () => {
+  $("share-start").disabled = true;
+  renderShare({ state: "working", done: 0, total: 0 });
+  const st = await send("share");
+  $("share-start").disabled = false;
+  if (st?.error) renderShare({ state: "error", error: st.error });
+  else renderShare(st);
+};
+$("share-done").onclick = async () => {
+  await send("shareStop");
+  renderShare(null);
+};
 
 function note(text, isError = false) {
   $("queue-note").hidden = !text;
@@ -168,4 +224,4 @@ chrome.storage.local.onChanged.addListener((changes) => {
 });
 
 chrome.storage.session.get("player").then(({ player }) => render(player));
-checkEngine().then((ok) => ok && loadSettings());
+checkEngine().then((ok) => ok && (loadSettings(), pollShare()));

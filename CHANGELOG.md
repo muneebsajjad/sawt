@@ -23,6 +23,14 @@
   many are waiting (it holds three). Everything stays in the browser on your computer. `Alt+Q` is new, so if
   Chrome gave it to another extension, set it in `chrome://extensions/shortcuts`.
 
+- **Send to my phone.** In the popup, **Send to my phone** makes one MP3 of your queue (or of
+  this page when the queue is empty) and shows a QR code. Scan it with your phone's camera, tap
+  **Save to phone**, and listen offline on the way home. The phone fetches it straight from
+  your computer over your Wi-Fi: no cloud, no account, no app. The link has a long random
+  secret, serves only that MP3, and closes after 15 minutes or when you stop sharing. The phone
+  needs to be on the same Wi-Fi; some office and guest networks keep devices from seeing each
+  other. On macOS with the firewall on, allow the incoming connection the first time.
+
 ### Fixed
 - **`sawt agent install` could fail on macOS when restarting the engine** (`launchctl bootstrap`
   status 5): launchd had not finished stopping the old engine yet. It now waits and retries.

@@ -128,6 +128,14 @@ async function isPdf(tab) {
   }
 }
 
+async function needEngine(what) {
+  const [major, minor] = ((await api("/health")).version || "0.0").split(".").map(Number);
+  if (major === 0 && minor < 3) {
+    throw new Error(`${what} needs engine 0.3 or newer. Update it: uv tool upgrade sawt, `
+      + "then sawt agent install");
+  }
+}
+
 // The PDF in this tab as {title, text, pages, truncated}, made by the engine.
 async function pdfDoc(tab) {
   if (tab.url.startsWith("file:") && !(await chrome.extension.isAllowedFileSchemeAccess())) {
@@ -135,11 +143,7 @@ async function pdfDoc(tab) {
       + "Details under Sawt and turn on \"Allow access to file URLs\".");
   }
   // an engine older than 0.3 has no /pdf, and would misread the upload as a bad request
-  const [major, minor] = ((await api("/health")).version || "0.0").split(".").map(Number);
-  if (major === 0 && minor < 3) {
-    throw new Error("Reading PDFs needs engine 0.3 or newer. Update it: uv tool upgrade sawt, "
-      + "then sawt agent install");
-  }
+  await needEngine("Reading PDFs");
   let bytes;
   try {
     const res = await fetch(tab.url, { credentials: "include" });
@@ -395,6 +399,22 @@ async function command(msg) {
       if (q.length) return playItem(q[0]);
       return stop();
     }
+    case "share":
+      return share();
+    case "shareStatus": {
+      const { share: id } = await chrome.storage.session.get("share");
+      if (!id) return null;
+      return api(`/share/${id}`).catch(async () => {
+        await chrome.storage.session.remove("share");     // the engine restarted: it is gone
+        return null;
+      });
+    }
+    case "shareStop": {
+      const { share: id } = await chrome.storage.session.get("share");
+      await chrome.storage.session.remove("share");
+      if (id) await api(`/share/${id}/stop`, {}).catch(() => {});
+      return;
+    }
     case "pageWords":
       return wantedWords(s.words);
     case "voices":
@@ -570,3 +590,20 @@ getQueue().then(showCount);
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.queue) showCount(changes.queue.newValue || []);
 });
+
+// ---- Send to phone ---------------------------------------------------------------------------
+// The engine makes one MP3 of the queue (or of this page when the queue is empty) and opens a
+// short-lived link on the local Wi-Fi, shown in the popup as a QR code for the phone to scan.
+async function share() {
+  await needEngine("Sending to your phone");
+  let items = await getQueue();
+  if (!items.length) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    items = [await snapshot(tab)];
+  }
+  const { voice, speed } = await settings();
+  const st = await api("/share", { voice, speed,
+                                   items: items.map(({ title, text }) => ({ title, text })) });
+  await chrome.storage.session.set({ share: st.id });
+  return st;
+}
