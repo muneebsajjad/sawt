@@ -15,6 +15,21 @@
   // A player box is the widest ancestor of a slider/audio element that still holds no real
   // prose: no paragraph of a dozen words, and little text overall. Readability would turn its
   // divs into paragraphs of "0:00", "Michael", "USA"...
+  // Formulas: MathML carries its TeX source in <annotation>, which would be read out as
+  // "backslash mathbf". A single symbol ("where w is the weight") is kept as text; a formula is
+  // left out, as in PDFs. Reference lists go too (footnotes stay: they are the author's words).
+  function dropMathAndReferences(doc) {
+    for (const m of doc.querySelectorAll("math")) {
+      for (const a of m.querySelectorAll("annotation, annotation-xml")) a.remove();
+      const t = m.textContent.replace(/\s+/g, "");
+      m.replaceWith(doc.createTextNode(t.length <= 3 && m.getAttribute("display") !== "block" ? t : ""));
+    }
+    for (const el of doc.querySelectorAll("[class*=bibliograph], [id*=bibliograph], .references,"
+                                          + " #references, .reflist, section.ltx_bibliography")) {
+      el.remove();
+    }
+  }
+
   function dropWidgets(doc) {
     for (const el of doc.querySelectorAll(WIDGET)) {
       if (!el.isConnected) continue;
@@ -68,6 +83,7 @@
   }
 
   const copy = document.cloneNode(true);
+  dropMathAndReferences(copy);
   dropWidgets(copy);
   const article = new Readability(copy).parse();
   if (article && article.content) {

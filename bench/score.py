@@ -1,6 +1,7 @@
 """Scoreboard: how much junk an extractor reads and how much content it misses, against labels.
 
-truth = what Sawt read (2026-11-09) + labels.json corrections + rules below. Measured in words.
+truth = what Sawt read (2026-11-09) + labels.json corrections + rules below, frozen in
+truth.json (block numbers per page) so a later extractor is scored against the same key.
   python score.py                 # today's Sawt (results/*.json "sawt")
   python score.py trafilatura     # results/<n>.trafilatura.txt
 """
@@ -27,8 +28,15 @@ def truth(n, d):
             neutral.add(b["i"])
     return T - set(lab.get("drop", [])), neutral
 
+FROZEN = json.load(open("truth.json")) if __import__("os").path.exists("truth.json") else {}
+
+
 def score(pred_text, n, d):
-    T, neutral = truth(n, d)
+    if n in FROZEN:                       # the answer key, fixed when the labels were made
+        T, neutral = set(FROZEN[n]["read"]), set(FROZEN[n]["neutral"])
+        assert FROZEN[n]["blocks"] == len(d["blocks"]), f"{n}: page split differently"
+    else:
+        T, neutral = truth(n, d)
     P = read_set({"blocks": d["blocks"], "sawt": {"text": pred_text}})
     w = {b["i"]: len(norm(b["text"]).split()) for b in d["blocks"]}
     junk = sum(w[i] for i in P - T - neutral)
