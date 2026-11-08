@@ -2,6 +2,33 @@
 // chrome.scripting.executeScript hands back to the background worker.
 (() => {
   const BLOCKS = "p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, figcaption, dt, dd";
+  // Controls are never prose: their labels ("Play", "100%", "Download") are not the article.
+  const CONTROLS = "button, input, select, textarea, audio, video, canvas, svg, [role=button],"
+    + " [role=slider], [role=progressbar], [role=toolbar], [role=menu], [role=menubar],"
+    + " [role=tablist], [role=dialog], [role=switch], [aria-hidden=true], [hidden]";
+  // What marks a media player or similar widget, whose whole box should go, not just its buttons.
+  const WIDGET = "audio, video, input[type=range], [role=slider], [role=progressbar]";
+  const MEDIA_TEXT = /^(\d{1,2}:\d{2}(:\d{2})?(\s*\/\s*\d{1,2}:\d{2}(:\d{2})?)?|\d{1,3}\s?%|[0-9.]+\s?[x×]|-?\d{1,2}:\d{2}\s+-?\d{1,2}:\d{2})$/i;
+
+  const words = (el) => el.textContent.replace(/\s+/g, " ").trim().split(" ").filter(Boolean).length;
+
+  // A player box is the widest ancestor of a slider/audio element that still holds no real
+  // prose: no paragraph of a dozen words, and little text overall. Readability would turn its
+  // divs into paragraphs of "0:00", "Michael", "USA"...
+  function dropWidgets(doc) {
+    for (const el of doc.querySelectorAll(WIDGET)) {
+      if (!el.isConnected) continue;
+      let box = el;
+      for (let up = el.parentElement, n = 0; up && up !== doc.body && n < 8;
+           up = up.parentElement, n++) {
+        const prose = [...up.querySelectorAll("p, li, blockquote")].some((p) => words(p) >= 12);
+        if (prose || words(up) > 80) break;
+        box = up;
+      }
+      box.remove();
+    }
+    for (const el of doc.querySelectorAll(CONTROLS)) el.remove();
+  }
 
   // Readability's textContent loses paragraph breaks, and the server pauses longer at those,
   // so rebuild the text from block elements of its cleaned HTML.
@@ -12,9 +39,27 @@
     for (const el of doc.body.querySelectorAll(BLOCKS)) {
       if (el.querySelector(BLOCKS)) continue;          // leaf blocks only, or text repeats
       const t = el.textContent.replace(/\s+/g, " ").trim();
-      if (t) parts.push(t);
+      if (t) parts.push({ t, heading: /^H\d$/.test(el.tagName), item: el.tagName === "LI" });
     }
-    return parts.length ? parts.join("\n\n") : doc.body.textContent.trim();
+    return parts.length ? clean(parts).join("\n\n") : doc.body.textContent.trim();
+  }
+
+  // Whatever widget text got past dropWidgets: timestamps and percentages on their own, and runs
+  // of four or more scraps (two or three words, no sentence) such as "Michael", "USA",
+  // "Lauren", "England". List items are left alone: "2 eggs", "1 cup flour" are content.
+  function clean(parts) {
+    const scrap = (p) => !p.heading && !p.item && p.t.split(" ").length <= 3
+      && !/[.!?:;"”]$/.test(p.t);
+    const out = [];
+    for (let i = 0; i < parts.length;) {
+      if (MEDIA_TEXT.test(parts[i].t)) { i++; continue; }
+      let j = i;
+      while (j < parts.length && (scrap(parts[j]) || MEDIA_TEXT.test(parts[j].t))) j++;
+      if (j - i >= 4) { i = j; continue; }
+      out.push(parts[i].t);
+      i++;
+    }
+    return out;
   }
 
   const selection = String(window.getSelection() || "").trim();
@@ -22,7 +67,9 @@
     return { title: "", text: selection, source: "selection" };
   }
 
-  const article = new Readability(document.cloneNode(true)).parse();
+  const copy = document.cloneNode(true);
+  dropWidgets(copy);
+  const article = new Readability(copy).parse();
   if (article && article.content) {
     return { title: (article.title || document.title).trim(), text: toText(article.content),
              source: "article" };
