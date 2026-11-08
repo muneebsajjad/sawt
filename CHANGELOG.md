@@ -33,6 +33,8 @@
   guest and two-router networks don't; the popup says which address the phone should have.
 
 ### Fixed
+- **Media players on a page were read aloud** ("0:00, 0:00, 100%, Michael, USA…"). Audio and
+  video players, sliders, voice pickers and other controls are now left out of the article.
 - **`sawt agent install` could fail on macOS when restarting the engine** (`launchctl bootstrap`
   status 5): launchd had not finished stopping the old engine yet. It now waits and retries.
 
