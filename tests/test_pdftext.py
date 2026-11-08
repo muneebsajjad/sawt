@@ -114,3 +114,40 @@ def test_table_of_contents_is_cut_but_a_heading_ending_in_a_number_is_kept():
              "Text.", "4.2 Convergence of Algorithm 1", "More text."]
     paras = pdftext._without_contents([p for p in paras if not pdftext._is_clutter(p)])
     assert paras == ["1 Introduction", "Text.", "4.2 Convergence of Algorithm 1", "More text."]
+
+
+def test_running_headers_that_carry_the_page_number_are_dropped():
+    # the header text changes with the section, the number goes up with the page
+    heads = ["1.3. The first program 3", "4 Chapter 1. The way of the program",
+             "1.5. Values and types 5", "6 Chapter 1. The way of the program",
+             "2.1. Assignment statements 7", "8 Chapter 2. Variables"]
+    pages = [[h, BODY, "the page ends here."] for h in heads]
+    text = " ".join(pdftext.paragraphs(pages))
+    assert "Chapter" not in text and "first program" not in text
+
+
+def test_a_sentence_that_mentions_a_figure_is_not_a_caption():
+    assert not pdftext._is_clutter("Figure 2.1 shows the four methods using the example.")
+    assert not pdftext._is_clutter("Table 2.2 shows the final mixture of datasets we used.")
+    assert pdftext._is_clutter("Figure 1.2: Larger models make better use of context.")
+    assert pdftext._is_clutter("Figure 3. Distributed version control diagram")
+
+
+def test_a_short_caption_does_not_swallow_the_paragraph_after_it():
+    pages = [["Figure 1. Local version control diagram", BODY, "and that is the point."]]
+    paras = pdftext.paragraphs(pages)
+    assert paras[0] == "Figure 1. Local version control diagram"
+    assert paras[1].endswith("and that is the point.")
+
+
+def test_numbered_code_lines_are_not_headings():
+    assert not pdftext._is_heading("3 lock(&mutex);")
+    assert not pdftext._is_heading("4 balance = balance + 1;")
+    assert pdftext._is_heading("3 Model Architecture")
+
+
+def test_a_sentence_wrapping_onto_a_line_that_starts_with_table_is_kept():
+    pages = [[BODY, "Results on selected GLUE tasks are shown in",
+              "Table 6. In this table, we report the average accuracy.", BODY, "and so on."]]
+    text = " ".join(pdftext.paragraphs(pages))
+    assert "shown in Table 6. In this table, we report the average accuracy." in text

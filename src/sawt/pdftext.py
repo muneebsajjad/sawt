@@ -32,8 +32,27 @@ def _key(line):
     return re.sub(r'\d+', '#', line.lower())
 
 
+def _page_number_lines(pages):
+    """Edge lines that carry the page number: "1.3. The first program 3", "2 Chapter 1. Data".
+    Their text changes with the section, but the number at their start or end goes up by one
+    with each page, so the same offset from the page index recurs on most pages."""
+    found = []                            # (page, line index, offset)
+    for p, lines in enumerate(pages):
+        for i in set(range(min(2, len(lines)))) | set(range(max(0, len(lines) - 2), len(lines))):
+            for m in (re.match(r'^(\d{1,4})\s', lines[i]), re.search(r'\s(\d{1,4})$', lines[i])):
+                if m and len(lines[i]) <= 90:
+                    found.append((p, i, int(m[1]) - p))
+    offsets = {}
+    for p, _, off in found:
+        offsets.setdefault(off, set()).add(p)
+    good = {off for off, ps in offsets.items() if len(ps) >= max(3, 0.3 * len(pages))}
+    return {(p, i) for p, i, off in found if off in good}
+
+
 def _strip_furniture(pages):
-    """Drop page numbers, and lines repeated at the top or bottom of most pages."""
+    """Drop page numbers, running headers that carry them, and lines repeated at the top or
+    bottom of most pages."""
+    numbered = _page_number_lines(pages) if len(pages) >= 6 else set()
     edge = lambda lines: lines[:3] + lines[-3:]
     counts = {}
     for lines in pages:
@@ -41,15 +60,18 @@ def _strip_furniture(pages):
             counts[k] = counts.get(k, 0) + 1
     repeated = {k for k, n in counts.items() if len(pages) >= 3 and n >= max(3, len(pages) / 2)}
     out = []
-    for lines in pages:
+    for p, lines in enumerate(pages):
         edges = set(range(min(3, len(lines)))) | set(range(max(0, len(lines) - 3), len(lines)))
         out.append([l for i, l in enumerate(lines)
-                    if not (i in edges and (PAGE_NUM.match(l) or _key(l) in repeated))])
+                    if not ((p, i) in numbered
+                            or i in edges and (PAGE_NUM.match(l) or _key(l) in repeated))])
     return out
 
 
 def _is_heading(line):
     if not line or len(line) > 90 or ENDS_SENTENCE.search(line) or line.endswith(","):
+        return False
+    if re.search(r'[;{}=]', line):            # "3 lock(&mutex);": a numbered line of code
         return False
     words = line.split()
     if HEADING_NUM.match(line) and len(words) <= 12:
@@ -85,7 +107,8 @@ NOTICE = re.compile(r'^(\d+(st|nd|rd|th)\s+(annual\s+)?(conference|workshop|inte
                     r'equal contribution|corresponding author|author contributions|'
                     r'accepted (to|at|for)\b|license[ds]? under|this work is licensed|'
                     r'code (and \S+ )?(is |are )?available)', re.I)
-CAPTION = re.compile(r'^(figure|fig\.|table|algorithm|listing)\s*[A-Z]?\d+[.:]', re.I)
+# "Figure 2:", "Table 3.1." label a caption; "Figure 2.1 shows ..." is a sentence of the text
+CAPTION = re.compile(r'^(figure|fig\.|table|algorithm|listing)\s*[A-Z]?\d+(\.\d+)*\s*[.:](\s|$)', re.I)
 DOT_LEADER = re.compile(r'(\.\s?){5,}')
 AFFILIATION = re.compile(r'\b(universit|institut|college|school of|department|dept\.|faculty|'
                          r'laborator|lab\b|centre|center for|academy|research|inc\.|corp|ltd|'
@@ -183,6 +206,15 @@ def paragraphs(pages):
             flush()
             paras.append(line)
             continue
+        if CAPTION.match(line) and (not cur or ENDS_SENTENCE.search(cur)):
+            # only after a finished sentence: "shown in" / "Table 6. In this table..." is the
+            # sentence running on, not a caption
+            # a caption starts its own paragraph, and a short one ends there, so the text after
+            # it ("Figure 1. Local version control diagram" / "One of the most...") is kept
+            flush()
+            if len(line) < 0.8 * width:
+                paras.append(line)
+                continue
         if cur.endswith("-") and line[0].islower() and cur[-2:-1].isalpha():
             cur = _join_hyphen(cur, line)
         else:
