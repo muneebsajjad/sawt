@@ -1,4 +1,8 @@
-"""Send to phone: an article, or the queue, as one MP3 that a phone on the same Wi-Fi fetches.
+"""An article, or the queue, as one MP3: saved to Downloads, or fetched by a phone on the Wi-Fi.
+
+Saving is the main way: the file lands in ~/Downloads, and from there it goes to a phone by
+AirDrop, a messenger or a cable. The Wi-Fi link below is the second way, for networks that let
+a phone reach the computer (many office and guest networks don't).
 
 The engine itself only ever listens on 127.0.0.1. A share opens a second, separate server on
 the computer's local network address for a short while, which answers exactly two requests,
@@ -9,9 +13,12 @@ Nothing goes through the internet: the phone talks to this computer over the loc
 import hmac
 import html
 import ipaddress
+import pathlib
 import re
 import secrets
 import socket
+import subprocess
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -61,13 +68,14 @@ def file_name(titles):
 class Share:
     """One send: synthesizes in the background, then serves the result to the phone."""
 
-    def __init__(self, engine, items, voice, speed):
+    def __init__(self, engine, items, voice, speed, mode="save"):
+        self.mode = mode                # "save": to Downloads; "phone": a Wi-Fi link
         self.id = secrets.token_hex(8)
         self.token = secrets.token_urlsafe(24)
         self.engine, self.items, self.voice, self.speed = engine, items, voice, speed
         self.titles = [it["title"] for it in items]
         self.name = file_name(self.titles)
-        self.state = "working"          # working -> ready -> closed, or error
+        self.state = "working"          # working -> saved | ready -> closed, or error
         self.error = None
         self.done = self.total = 0
         self.seconds = 0.0
@@ -80,9 +88,12 @@ class Share:
         threading.Thread(target=self._run, daemon=True).start()
 
     def status(self):
-        out = {"id": self.id, "state": self.state, "done": self.done, "total": self.total,
+        out = {"id": self.id, "mode": self.mode, "state": self.state, "done": self.done, "total": self.total,
                "titles": self.titles, "name": self.name, "error": self.error,
                "seconds": round(self.seconds), "fetched": self.fetched}
+        if self.state == "saved":
+            out["path"] = str(self.file)
+            out["folder"] = self.file.parent.name
         if self.state == "ready":
             out["url"] = self.url
             # what the phone's own address must start with to be on the same network
@@ -94,8 +105,8 @@ class Share:
 
     def _run(self):
         try:
-            ip = lan_ip()
-            if ip is None:
+            ip = lan_ip() if self.mode == "phone" else None
+            if self.mode == "phone" and ip is None:
                 raise ShareError("This computer isn't on a local network. Connect to Wi-Fi "
                                  "and try again.")
             plans = [self.engine.plan(f"{it['title']}\n\n{it['text']}")[0] for it in self.items]
@@ -116,6 +127,11 @@ class Share:
                         self.seconds += len(audio) / SR
                         self._write(out, GAP_PARA if c["para_end"] else GAP_SENTENCE)
                         self.done += 1
+            if self.mode == "save":
+                self.file = unique(downloads() / self.name)
+                part.replace(self.file)
+                self.state = "saved"
+                return
             part.replace(self.file)
             self._open(ip)
         except ShareError as e:
@@ -123,7 +139,7 @@ class Share:
         except Exception as e:                      # disk, encoder: report it, keep the engine
             self.state, self.error = "error", f"Could not make the audio ({e})."
         finally:
-            if self.state != "ready":
+            if self.state not in ("ready", "saved"):
                 self.file.with_suffix(".part").unlink(missing_ok=True)
 
     def _write(self, out, seconds):
@@ -155,7 +171,40 @@ class Share:
             self.server = None
         if self.state in ("working", "ready"):
             self.state = "closed"
-        self.file.unlink(missing_ok=True)
+        if self.mode == "phone":           # a saved file is the user's now
+            self.file.unlink(missing_ok=True)
+
+    def reveal(self):
+        """Show the saved file in Finder / Explorer / the file manager."""
+        if self.state != "saved" or not self.file.exists():
+            return False
+        f = str(self.file)
+        if sys.platform == "darwin":
+            cmd = ["open", "-R", f]
+        elif sys.platform == "win32":
+            cmd = ["explorer", f"/select,{f}"]
+        else:
+            cmd = ["xdg-open", str(self.file.parent)]
+        try:
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            return False
+        return True
+
+
+def downloads():
+    d = pathlib.Path.home() / "Downloads"
+    return d if d.is_dir() else pathlib.Path.home()
+
+
+def unique(path):
+    """name.mp3, then name (2).mp3, ...: never overwrite something already saved."""
+    n = 2
+    out = path
+    while out.exists():
+        out = path.with_name(f"{path.stem} ({n}){path.suffix}")
+        n += 1
+    return out
 
 
 def qr_data_uri(url):
@@ -314,7 +363,7 @@ class Shares:
         self.current = None
         self.lock = threading.Lock()
 
-    def start(self, items, voice, speed):
+    def start(self, items, voice, speed, mode="save"):
         if not 1 <= len(items) <= MAX_ITEMS:
             raise ShareError(f"Send between 1 and {MAX_ITEMS} articles.")
         clean = []
@@ -327,7 +376,7 @@ class Shares:
         with self.lock:
             if self.current:
                 self.current.close()
-            self.current = Share(self.engine, clean, voice, speed)
+            self.current = Share(self.engine, clean, voice, speed, mode)
             return self.current
 
     def get(self, sid):

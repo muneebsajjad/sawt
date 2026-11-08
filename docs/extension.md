@@ -43,10 +43,13 @@ there, with the highlight; otherwise it opens as a reading copy in a background 
 article leaves the queue, whichever way it was started; **Skip to the next article** drops the
 current one. Each item resumes like any page. The toolbar badge shows how many are waiting.
 
-**Send to my phone.** The popup's **Send to my phone** posts the queue's items (or this page,
-when the queue is empty) to the engine's `/share`, with the current voice and speed. The engine
-speaks every chunk (reusing and filling the same audio cache the reader uses), writes one MP3
-to `~/Sawt/work/share/`, and opens a second server on the computer's private LAN address,
+**Save as MP3 / send to a phone.** The popup's **Save as MP3** posts the queue's items (or this
+page, when the queue is empty) to the engine's `/share` with `mode: "save"` and the current
+voice and speed. The engine speaks every chunk (reusing and filling the same audio cache the
+reader uses) into one MP3 in `~/Downloads` (never overwriting: `name (2).mp3`), and
+`/share/<id>/reveal` shows it in Finder, Explorer or the file manager. With `mode: "phone"`
+(**or send to a phone on this Wi-Fi**) the MP3 goes to `~/Sawt/work/share/` instead, and the
+engine opens a second server on the computer's private LAN address,
 answering only `/<token>` (a phone-sized page with a player and **Save to phone**) and
 `/<token>/audio.mp3` (with byte ranges, which Safari needs). The popup polls `/share/<id>` for
 progress, then shows the link as a QR code, and "Your phone has it" once the audio was fetched.

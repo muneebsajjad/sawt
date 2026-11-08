@@ -35,7 +35,9 @@ the voice model (from the kokoro-onnx GitHub releases page) and of the word glos
 Sawt's own GitHub releases page). Word meanings are looked up in that file on your computer;
 the words you read are never sent anywhere to be defined.
 
-**Send to my phone.** Only when you click it, the engine makes an MP3 of the article (or your
+**Save as MP3** writes the MP3 to your Downloads folder and nowhere else.
+
+**Send to a phone on this Wi-Fi.** Only when you click it, the engine makes an MP3 of the article (or your
 queue) and makes it available to devices on your own local network (your Wi-Fi), at a link
 with a long random secret in it, shown to you as a QR code. That link closes after 15 minutes,
 when you click "Stop sharing", or when you send something else, and the MP3 is then deleted.

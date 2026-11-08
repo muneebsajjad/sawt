@@ -42,15 +42,25 @@
     <p id="queue-empty" class="muted">Add articles here and Sawt reads them one after another.
       You can close their tabs.</p>
     <button id="queue-play" hidden>Play the queue</button>
-    <button id="share-start" class="share-btn" title="Make an MP3 and send it to a phone on this Wi-Fi">
-      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <span id="share-label">Send to my phone</span>
-    </button>
+    <div id="share-start">
+      <button id="save-mp3" class="share-btn" title="Make an MP3 to listen to anywhere, saved in Downloads">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3.5v11m0 0-4.5-4.5M12 14.5l4.5-4.5M4.5 16.5v2a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="share-label">Save as MP3</span>
+      </button>
+      <button id="send-phone" class="link-btn" title="A QR code your phone scans; it needs to reach this computer over the Wi-Fi">or send to a phone on this Wi-Fi</button>
+    </div>
     <div id="share" hidden>
       <div id="share-working">
         <p id="share-progress-text">Making the audio…</p>
         <div class="bar"><i id="share-bar"></i></div>
         <p class="muted small">You can close this popup; it keeps going.</p>
+      </div>
+      <div id="share-saved">
+        <p id="saved-what" class="sent"></p>
+        <button id="saved-reveal" class="primary">Show in Finder</button>
+        <p class="muted small">To listen on your phone: on an iPhone, right-click the file and
+          choose <b>Share → AirDrop</b>. On Android, send it to yourself on Telegram, WhatsApp or
+          email, or copy it over a cable.</p>
       </div>
       <div id="share-ready">
         <img id="share-qr" alt="QR code for the phone link" width="176" height="176">

@@ -19,7 +19,7 @@ The engine (`sawt serve`) listens on `127.0.0.1:7865` and answers a request only
   `--allow-extension <id>` or `SAWT_EXTENSION_IDS`. With no ID pinned, any extension is accepted, and the engine
   prints a warning at startup saying so.
 
-**Send to my phone** is the one exception to "127.0.0.1 only", and it is opt-in per use. When
+**Send to a phone on this Wi-Fi** is the one exception to "127.0.0.1 only", and it is opt-in per use. When
 the extension asks for it, the engine opens a second, separate server on the computer's private
 LAN address (never a public or link-local one; it refuses to start otherwise). That server:
 

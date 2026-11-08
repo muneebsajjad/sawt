@@ -356,10 +356,13 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/stop":
             self.engine.stop()
             return self._send(200, {"ok": True})
-        m = re.match(r'^/share/([0-9a-f]{16})/stop$', self.path)
+        m = re.match(r'^/share/([0-9a-f]{16})/(stop|reveal)$', self.path)
         if m:
-            self.shares.stop(m[1])
-            return self._send(200, {"ok": True})
+            if m[2] == "stop":
+                self.shares.stop(m[1])
+                return self._send(200, {"ok": True})
+            s = self.shares.get(m[1])
+            return self._send(200, {"ok": bool(s and s.reveal())})
         if self.path in ("/read", "/share"):
             voice = req.get("voice", "af_bella")
             if voice not in self.engine.voices:
@@ -377,7 +380,8 @@ class Handler(BaseHTTPRequestHandler):
             items = [{"title": i.get("title"), "text": str(i.get("text", ""))[:MAX_TEXT]}
                      for i in items if isinstance(i, dict)]
             try:
-                s = self.shares.start(items, voice, speed)
+                mode = "phone" if req.get("mode") == "phone" else "save"
+                s = self.shares.start(items, voice, speed, mode)
             except share.ShareError as e:
                 return self._send(400, {"error": str(e)})
             return self._send(200, s.status())

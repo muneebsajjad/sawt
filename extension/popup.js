@@ -89,15 +89,16 @@ let shareTimer = null;
 let queueLength = 0;
 
 function renderShare(st) {
-  const live = st && ["working", "ready", "error"].includes(st.state);
+  const live = st && ["working", "ready", "saved", "error"].includes(st.state);
   $("share").hidden = !live;
   $("share-start").hidden = live;
-  $("share-label").textContent = queueLength > 1 ? "Send the queue to my phone"
-    : queueLength === 1 ? "Send the queued article to my phone" : "Send this page to my phone";
+  $("share-label").textContent = queueLength > 1 ? "Save the queue as one MP3"
+    : queueLength === 1 ? "Save the queued article as MP3" : "Save this page as MP3";
   clearTimeout(shareTimer);
   if (!live) return;
   $("share-working").hidden = st.state !== "working";
   $("share-ready").hidden = st.state !== "ready";
+  $("share-saved").hidden = st.state !== "saved";
   $("share-error").hidden = st.state !== "error";
   $("share-error").textContent = st.error || "";
   if (st.state === "working") {
@@ -117,24 +118,31 @@ function renderShare(st) {
     $("share-net").hidden = st.fetched || !st.network;
     $("share-prefix").textContent = st.network || "";
     $("share-done").textContent = st.fetched ? "Done" : `Stop sharing (link closes in ${left} min)`;
+  } else if (st.state === "saved") {
+    const min = Math.max(1, Math.round(st.seconds / 60));
+    $("saved-what").textContent = `✓ Saved to ${st.folder}: ${st.path.split(/[\\/]/).pop()} · ${min} min`;
+    $("saved-reveal").textContent = navigator.platform.startsWith("Mac") ? "Show in Finder"
+      : navigator.platform.startsWith("Win") ? "Show in folder" : "Open the folder";
+    $("share-done").textContent = "Done";
   } else {
     $("share-done").textContent = "Close";
   }
-  if (st.state !== "error") shareTimer = setTimeout(pollShare, st.state === "working" ? 700 : 2000);
+  if (st.state === "working" || st.state === "ready") shareTimer = setTimeout(pollShare, st.state === "working" ? 700 : 2000);
 }
 
 async function pollShare() {
   renderShare(await send("shareStatus"));
 }
 
-$("share-start").onclick = async () => {
-  $("share-start").disabled = true;
+async function startShare(mode) {
   renderShare({ state: "working", done: 0, total: 0 });
-  const st = await send("share");
-  $("share-start").disabled = false;
+  const st = await send("share", { mode });
   if (st?.error) renderShare({ state: "error", error: st.error });
   else renderShare(st);
-};
+}
+$("save-mp3").onclick = () => startShare("save");
+$("send-phone").onclick = () => startShare("phone");
+$("saved-reveal").onclick = () => send("shareReveal");
 $("share-done").onclick = async () => {
   await send("shareStop");
   renderShare(null);

@@ -24,7 +24,7 @@ def ready(tmp_path, monkeypatch):
     monkeypatch.setattr(share, "lan_ip", lambda: "127.0.0.1")
     shares = share.Shares(FakeEngine())
     s = shares.start([{"title": "One", "text": "Hello there."},
-                      {"title": "Two", "text": "Bye now."}], "bm_fable", 1.0)
+                      {"title": "Two", "text": "Bye now."}], "bm_fable", 1.0, "phone")
     for _ in range(200):
         if s.state != "working":
             break
@@ -77,7 +77,7 @@ def test_a_stopped_share_is_gone(ready):
 
 def test_a_new_share_replaces_the_old(ready):
     shares, s = ready
-    t = shares.start([{"title": "Three", "text": "Again."}], "bm_fable", 1.0)
+    t = shares.start([{"title": "Three", "text": "Again."}], "bm_fable", 1.0, "phone")
     assert s.state == "closed" and shares.get(t.id) is t and shares.get(s.id) is None
     t.close()
 
@@ -95,9 +95,29 @@ def test_limits():
 def test_off_the_network(tmp_path, monkeypatch):
     monkeypatch.setattr(share.paths, "WORK", tmp_path)
     monkeypatch.setattr(share, "lan_ip", lambda: None)
-    s = share.Shares(FakeEngine()).start([{"title": "x", "text": "y"}], "v", 1.0)
+    s = share.Shares(FakeEngine()).start([{"title": "x", "text": "y"}], "v", 1.0, "phone")
     for _ in range(100):
         if s.state != "working":
             break
         time.sleep(0.02)
     assert s.state == "error" and "Wi-Fi" in s.error
+
+
+def wait(s):
+    for _ in range(200):
+        if s.state != "working":
+            return s
+        time.sleep(0.02)
+    return s
+
+
+def test_save_puts_the_mp3_in_downloads_without_opening_anything(tmp_path, monkeypatch):
+    monkeypatch.setattr(share.paths, "WORK", tmp_path / "work")
+    monkeypatch.setattr(share, "downloads", lambda: tmp_path)
+    monkeypatch.setattr(share, "lan_ip", lambda: pytest.fail("saving must not touch the network"))
+    shares = share.Shares(FakeEngine())
+    a = wait(shares.start([{"title": "My: Article?", "text": "Hello."}], "v", 1.0))
+    assert a.state == "saved" and a.file == tmp_path / "My Article.mp3" and a.file.stat().st_size
+    assert a.server is None and a.status()["path"] == str(a.file)
+    b = wait(shares.start([{"title": "My: Article?", "text": "Hello."}], "v", 1.0))
+    assert b.file.name == "My Article (2).mp3" and a.file.exists()     # replaced, not deleted
