@@ -92,7 +92,7 @@ class Engine:
         self.next_sid = 1
         self.cond = threading.Condition()
         self.failed = set()           # keys that could not even be stored: skipped, not retried
-        # the reader's worker and a phone share both speak; espeak, under Kokoro, is not
+        # the reader's worker and Save as MP3 both speak; espeak, under Kokoro, is not
         # thread-safe, so one chunk at a time (chunks are short, so reading stays responsive)
         self.speak_lock = threading.Lock()
         self.worker = threading.Thread(target=self._worker, daemon=True)
@@ -209,7 +209,7 @@ class Engine:
 
     def audio_of(self, key, text, voice, speed):
         """One chunk's samples, from the cache when it is there; made and cached otherwise, so
-        a shared article plays instantly in the browser later, and the other way round."""
+        a saved article plays instantly in the browser later, and the other way round."""
         if self.path(key).exists():
             try:
                 audio, _ = sf.read(self.path(key), dtype="float32")
@@ -380,8 +380,7 @@ class Handler(BaseHTTPRequestHandler):
             items = [{"title": i.get("title"), "text": str(i.get("text", ""))[:MAX_TEXT]}
                      for i in items if isinstance(i, dict)]
             try:
-                mode = "phone" if req.get("mode") == "phone" else "save"
-                s = self.shares.start(items, voice, speed, mode)
+                s = self.shares.start(items, voice, speed)
             except share.ShareError as e:
                 return self._send(400, {"error": str(e)})
             return self._send(200, s.status())
@@ -416,7 +415,7 @@ def main():
     Handler.engine = Engine(paths.CACHE, dpath if dpath.is_absolute() else paths.ROOT / dpath)
     glossary.load_in_background(Handler.engine)
     Handler.shares = share.Shares(Handler.engine)
-    for old in (paths.WORK / "share").glob("*"):     # left by a share the engine died during
+    for old in (paths.WORK / "share").glob("*"):     # left by a save the engine died during
         old.unlink(missing_ok=True)
     Handler.port = args.port
     env_ids = os.environ.get("SAWT_EXTENSION_IDS", "")

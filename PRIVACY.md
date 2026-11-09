@@ -37,14 +37,6 @@ the words you read are never sent anywhere to be defined.
 
 **Save as MP3** writes the MP3 to your Downloads folder and nowhere else.
 
-**Send to a phone on this Wi-Fi.** Only when you click it, the engine makes an MP3 of the article (or your
-queue) and makes it available to devices on your own local network (your Wi-Fi), at a link
-with a long random secret in it, shown to you as a QR code. That link closes after 15 minutes,
-when you click "Stop sharing", or when you send something else, and the MP3 is then deleted.
-Your phone fetches the file directly from your computer; it does not go through the internet
-or any server of ours. While the link is open, someone else on the same network who had that
-exact link could download the same file, which is why it is long, random and short-lived.
-
 A meaning card has a "From Wiktionary" link. Wiktionary is contacted only if you click it.
 
 ## Contact

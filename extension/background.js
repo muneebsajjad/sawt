@@ -400,7 +400,7 @@ async function command(msg) {
       return stop();
     }
     case "share":
-      return share(msg.mode === "phone" ? "phone" : "save");
+      return share();
     case "shareReveal": {
       const { share: id } = await chrome.storage.session.get("share");
       return id && api(`/share/${id}/reveal`, {});
@@ -595,18 +595,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.queue) showCount(changes.queue.newValue || []);
 });
 
-// ---- Save MP3 / send to phone ----------------------------------------------------------------
-// The engine makes one MP3 of the queue (or of this page when the queue is empty). "save" puts
-// it in Downloads; "phone" opens a short-lived link on the local Wi-Fi, shown as a QR code.
-async function share(mode) {
-  await needEngine(mode === "save" ? "Saving an MP3" : "Sending to your phone");
+// ---- Save as MP3 ------------------------------------------------------------------------------
+// The engine makes one MP3 of the queue (or of this page when the queue is empty) in Downloads.
+async function share() {
+  await needEngine("Saving an MP3");
   let items = await getQueue();
   if (!items.length) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     items = [await snapshot(tab)];
   }
   const { voice, speed } = await settings();
-  const st = await api("/share", { voice, speed, mode,
+  const st = await api("/share", { voice, speed,
                                    items: items.map(({ title, text }) => ({ title, text })) });
   await chrome.storage.session.set({ share: st.id });
   return st;

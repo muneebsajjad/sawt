@@ -84,12 +84,12 @@ function renderQueue(queue = []) {
   }));
 }
 
-// ---- Send to phone ----
+// ---- Save as MP3 ----
 let shareTimer = null;
 let queueLength = 0;
 
 function renderShare(st) {
-  const live = st && ["working", "ready", "saved", "error"].includes(st.state);
+  const live = st && ["working", "saved", "error"].includes(st.state);
   $("share").hidden = !live;
   $("share-start").hidden = live;
   $("share-label").textContent = queueLength > 1 ? "Save the queue as one MP3"
@@ -97,7 +97,6 @@ function renderShare(st) {
   clearTimeout(shareTimer);
   if (!live) return;
   $("share-working").hidden = st.state !== "working";
-  $("share-ready").hidden = st.state !== "ready";
   $("share-saved").hidden = st.state !== "saved";
   $("share-error").hidden = st.state !== "error";
   $("share-error").textContent = st.error || "";
@@ -106,18 +105,7 @@ function renderShare(st) {
     $("share-progress-text").textContent = `Making the audio… ${pct}%`;
     $("share-bar").style.width = `${pct}%`;
     $("share-done").textContent = "Cancel";
-  } else if (st.state === "ready") {
-    if ($("share-qr").src !== st.qr) $("share-qr").src = st.qr;
-    const what = st.titles.length > 1 ? `${st.titles.length} articles` : st.titles[0];
-    const min = Math.max(1, Math.round(st.seconds / 60));
-    const left = Math.ceil(st.expiresIn / 60);
-    $("share-what").classList.toggle("sent", st.fetched);
-    $("share-what").textContent = st.fetched ? "✓ Your phone has it"
-      : `${what} · ${min} min of audio`;
-    $("share-how").hidden = st.fetched;
-    $("share-net").hidden = st.fetched || !st.network;
-    $("share-prefix").textContent = st.network || "";
-    $("share-done").textContent = st.fetched ? "Done" : `Stop sharing (link closes in ${left} min)`;
+    shareTimer = setTimeout(pollShare, 700);
   } else if (st.state === "saved") {
     const min = Math.max(1, Math.round(st.seconds / 60));
     $("saved-what").textContent = `✓ Saved to ${st.folder}: ${st.path.split(/[\\/]/).pop()} · ${min} min`;
@@ -127,21 +115,18 @@ function renderShare(st) {
   } else {
     $("share-done").textContent = "Close";
   }
-  if (st.state === "working" || st.state === "ready") shareTimer = setTimeout(pollShare, st.state === "working" ? 700 : 2000);
 }
 
 async function pollShare() {
   renderShare(await send("shareStatus"));
 }
 
-async function startShare(mode) {
+$("save-mp3").onclick = async () => {
   renderShare({ state: "working", done: 0, total: 0 });
-  const st = await send("share", { mode });
+  const st = await send("share");
   if (st?.error) renderShare({ state: "error", error: st.error });
   else renderShare(st);
-}
-$("save-mp3").onclick = () => startShare("save");
-$("send-phone").onclick = () => startShare("phone");
+};
 $("saved-reveal").onclick = () => send("shareReveal");
 $("share-done").onclick = async () => {
   await send("shareStop");

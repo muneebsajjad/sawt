@@ -47,7 +47,6 @@
         <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3.5v11m0 0-4.5-4.5M12 14.5l4.5-4.5M4.5 16.5v2a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span id="share-label">Save as MP3</span>
       </button>
-      <button id="send-phone" class="link-btn" title="A QR code your phone scans; it needs to reach this computer over the Wi-Fi">or send to a phone on this Wi-Fi</button>
     </div>
     <div id="share" hidden>
       <div id="share-working">
@@ -61,15 +60,6 @@
         <p class="muted small">To listen on your phone: on an iPhone, right-click the file and
           choose <b>Share → AirDrop</b>. On Android, send it to yourself on Telegram, WhatsApp or
           email, or copy it over a cable.</p>
-      </div>
-      <div id="share-ready">
-        <img id="share-qr" alt="QR code for the phone link" width="176" height="176">
-        <p id="share-what"></p>
-        <p class="muted small" id="share-how">Scan with your phone's camera, then tap
-          <b>Save to phone</b>.</p>
-        <p class="muted small" id="share-net">Your phone must be on the same Wi-Fi as this
-          computer: its Wi-Fi address should start with <b id="share-prefix"></b>
-          If the page doesn't open, check that first.</p>
       </div>
       <p id="share-error" hidden></p>
       <button id="share-done">Cancel</button>

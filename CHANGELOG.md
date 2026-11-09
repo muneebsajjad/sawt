@@ -29,11 +29,6 @@
 - **Save as MP3.** In the popup, **Save as MP3** makes one MP3 of your queue (or of this page
   when the queue is empty) in your Downloads folder, with **Show in Finder**. From there it
   goes to a phone by AirDrop, a messenger or a cable, for listening offline on the way home.
-- **Or send it to a phone on the Wi-Fi.** The smaller option under it shows a QR code instead:
-  scan it, tap **Save to phone**, and the phone fetches the MP3 straight from your computer.
-  The link has a long random secret, serves only that MP3, and closes after 15 minutes or when
-  you stop sharing. It needs a network that lets devices reach each other, which many office,
-  guest and two-router networks don't; the popup says which address the phone should have.
 
 ### Fixed
 - **Media players on a page were read aloud** ("0:00, 0:00, 100%, Michael, USA…"). Audio and
