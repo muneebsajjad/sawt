@@ -18,6 +18,14 @@ class FakeEngine:
         return np.zeros(share.SR // 2, dtype="float32")
 
 
+def wait(s, seconds=30):
+    """Until the share is made; CI machines can be far slower than a laptop."""
+    end = time.time() + seconds
+    while s.state == "working" and time.time() < end:
+        time.sleep(0.02)
+    return s
+
+
 @pytest.fixture
 def ready(tmp_path, monkeypatch):
     monkeypatch.setattr(share.paths, "WORK", tmp_path)
@@ -25,10 +33,7 @@ def ready(tmp_path, monkeypatch):
     shares = share.Shares(FakeEngine())
     s = shares.start([{"title": "One", "text": "Hello there."},
                       {"title": "Two", "text": "Bye now."}], "bm_fable", 1.0, "phone")
-    for _ in range(200):
-        if s.state != "working":
-            break
-        time.sleep(0.02)
+    wait(s)
     yield shares, s
     s.close()
 
@@ -96,19 +101,10 @@ def test_off_the_network(tmp_path, monkeypatch):
     monkeypatch.setattr(share.paths, "WORK", tmp_path)
     monkeypatch.setattr(share, "lan_ip", lambda: None)
     s = share.Shares(FakeEngine()).start([{"title": "x", "text": "y"}], "v", 1.0, "phone")
-    for _ in range(100):
-        if s.state != "working":
-            break
-        time.sleep(0.02)
+    wait(s)
     assert s.state == "error" and "Wi-Fi" in s.error
 
 
-def wait(s):
-    for _ in range(200):
-        if s.state != "working":
-            return s
-        time.sleep(0.02)
-    return s
 
 
 def test_save_puts_the_mp3_in_downloads_without_opening_anything(tmp_path, monkeypatch):
