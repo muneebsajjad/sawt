@@ -63,4 +63,4 @@ path = "src/sawt/__init__.py"
 packages = ["src/sawt"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["HANDOFF.md"]
+exclude = ["HANDOFF.md", "bench/"]   # the benchmark keeps saved web pages locally
