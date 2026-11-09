@@ -18,8 +18,9 @@ class FakeEngine:
         return np.zeros(share.SR // 2, dtype="float32")
 
 
-def wait(s, seconds=30):
-    """Until the share is made; CI machines can be far slower than a laptop."""
+def wait(s, seconds=120):
+    """Until the share is made. CI machines are far slower than a laptop, and the first MP3 a
+    fresh macOS runner writes has taken over 30 s."""
     end = time.time() + seconds
     while s.state == "working" and time.time() < end:
         time.sleep(0.02)
