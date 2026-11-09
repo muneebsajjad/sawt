@@ -12,6 +12,15 @@
   <div id="progress" hidden><i></i></div>
   <p id="error" hidden></p>
 
+  <div id="update" hidden>
+    <p><b>Update the voice engine</b> to use what's new: <span id="update-what"></span></p>
+    <div class="cmd">
+      <code id="update-cmd">uv tool upgrade sawt &amp;&amp; sawt agent install</code>
+      <button id="update-copy" title="Copy the command">Copy</button>
+    </div>
+    <p class="muted">Run it in a terminal. Reading pages works meanwhile.</p>
+  </div>
+
   <div id="resumed" hidden>
     <span>Picked up where you left off</span>
     <button id="restart">Start over</button>

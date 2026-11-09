@@ -30,6 +30,11 @@
   when the queue is empty) in your Downloads folder, with **Show in Finder**. From there it
   goes to a phone by AirDrop, a messenger or a cable, for listening offline on the way home.
 
+- **The popup says when the engine needs updating.** The extension updates itself, the engine
+  does not: with an engine older than the extension, the popup lists what the update brings and
+  the command to run, with a copy button. It compares the two versions on your computer; nothing
+  is checked online.
+
 ### Fixed
 - **Media players on a page were read aloud** ("0:00, 0:00, 100%, Michael, USA…"). Audio and
   video players, sliders, voice pickers and other controls are now left out of the article.

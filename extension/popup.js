@@ -154,8 +154,41 @@ async function renderWords() {
 }
 
 // Without the engine nothing else in the popup can work, so it is replaced by the way to get one.
+// What each engine version brought, for the update notice. An engine older than the extension
+// still reads pages; these are what it is missing.
+const ENGINE_NEWS = [["0.3", "PDFs, Save as MP3, and cleaner reading of papers."]];
+
+function older(a, b) {          // "0.2.1" older than "0.3.0", by major.minor (patches don't matter)
+  const [x, y] = [a, b].map((v) => (v || "0.0").split(".").map(Number));
+  return x[0] < y[0] || (x[0] === y[0] && x[1] < y[1]);
+}
+
+function showUpdate(engine) {
+  const ext = chrome.runtime.getManifest().version;
+  const behind = !!engine && older(engine, ext);
+  $("update").hidden = !behind;
+  if (behind && navigator.platform.startsWith("Win")) {      // Windows PowerShell 5 has no &&
+    $("update-cmd").textContent = "uv tool upgrade sawt; sawt agent install";
+  }
+  if (behind) {
+    $("update-what").textContent = ENGINE_NEWS.filter(([v]) => older(engine, v + ".0"))
+      .map(([, what]) => what).join(" ") || `version ${ext}.`;
+  }
+}
+
+$("update-copy").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($("update-cmd").textContent);
+    $("update-copy").textContent = "Copied";
+  } catch {
+    getSelection().selectAllChildren($("update-cmd"));    // copy it by hand
+  }
+};
+
 async function checkEngine() {
-  const ok = !!(await send("health"));
+  const health = await send("health");
+  const ok = !!health;
+  showUpdate(health?.version);
   $("setup").hidden = ok;
   for (const id of ["read", "controls", "queue", "settings", "zoom-row"]) $(id).hidden = !ok;
   return ok;
