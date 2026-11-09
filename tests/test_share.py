@@ -71,7 +71,7 @@ def test_a_stopped_share_is_gone(ready):
     url = s.url
     shares.stop(s.id)
     assert not s.file.exists() and s.state == "closed"
-    with pytest.raises(urllib.error.URLError):
+    with pytest.raises(OSError):          # refused (macOS) or reset (Linux): either way, gone
         urllib.request.urlopen(url, timeout=2)
 
 

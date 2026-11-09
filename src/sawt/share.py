@@ -165,10 +165,13 @@ class Share:
 
     def close(self):
         self.cancelled.set()
-        if self.server:
-            threading.Thread(target=self.server.shutdown, daemon=True).start()
-            self.server.server_close()
-            self.server = None
+        server, self.server = self.server, None
+        if server:
+            # never called from the share's own serve_forever thread (the engine's handler or
+            # the expiry timer call it), so waiting for the loop to stop cannot deadlock; only
+            # then is the socket closed, so the port is gone when this returns
+            server.shutdown()
+            server.server_close()
         if self.state in ("working", "ready"):
             self.state = "closed"
         if self.mode == "phone":           # a saved file is the user's now
